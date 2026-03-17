@@ -286,6 +286,15 @@ _Based on analysis of 153 sessions from Jan–Feb 2026._
 - If you think something should be removed, present the case and let the user decide.
 - **Removing features silently is a trust violation.** The user must always be in control of what their project does.
 
+## Email Drafting
+
+When drafting emails, ALWAYS follow the email preferences from the agency-cowork memory repo. If working inside agency-cowork, read `memory/MEMORY.md` → `## Email Preferences`. Otherwise, read `~/.copilot/email-style.md` as a fallback. Key points:
+- Use Aptos 12pt font with `<div>` elements (not `<p>` tags)
+- No bold in body text — no `<b>` or `<strong>` except in the signature block
+- Bullet points, not numbered lists
+- Sign off with "All the best," + full signature block from the style guide
+- Conversational tone — short sentences, contractions, no corporate-speak
+
 ## Citations
 
 Every statistic or claim needs a clickable source URL.
