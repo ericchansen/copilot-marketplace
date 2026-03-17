@@ -288,7 +288,11 @@ _Based on analysis of 153 sessions from Jan–Feb 2026._
 
 ## Email Drafting
 
-When drafting emails, ALWAYS follow the email preferences from the agency-cowork memory repo. If working inside agency-cowork, read `memory/MEMORY.md` → `## Email Preferences`. Otherwise, read `~/.copilot/email-style.md` as a fallback. Key points:
+When drafting emails, load the style guide by checking these paths in order (use the first one found):
+1. `memory/MEMORY.md` → `## Email Preferences` (when working inside agency-cowork)
+2. `~/.copilot/email-style.md`
+
+If neither file exists, use the defaults below:
 - Use Aptos 12pt font with `<div>` elements (not `<p>` tags)
 - No bold in body text — no `<b>` or `<strong>` except in the signature block
 - Bullet points, not numbered lists
