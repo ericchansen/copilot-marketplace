@@ -1,6 +1,6 @@
 ---
-name: gh-pr-create
-description: 'MANDATORY for any gh pr create, gh pr edit, gh issue create, or gh issue edit command. This skill MUST be invoked BEFORE running any gh CLI command that includes a --body flag. It prevents PowerShell encoding bugs that silently corrupt markdown: backticks become \^G, em-dashes become garbled Unicode, code spans break. If you are about to type gh pr create or gh pr edit, STOP and use this skill instead. Triggers: create PR, open pull request, edit PR, PR body, create issue, edit issue, push and create PR, gh pr, gh issue.'
+name: gh-body-safe
+description: 'MANDATORY for any gh CLI command with a --body flag: gh pr create, gh pr edit, gh issue create, gh issue edit. Prevents PowerShell encoding bugs that silently corrupt markdown (backticks become \^G, em-dashes garble). Always writes body to a temp file and uses --body-file instead. Triggers: create PR, open pull request, edit PR, create issue, edit issue, push and create PR, gh pr, gh issue.'
 license: MIT
 allowed-tools: Bash
 ---
