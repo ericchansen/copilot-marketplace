@@ -334,9 +334,12 @@ This repository contains useful skills. To install them:
 
 | Skill | Description |
 |-------|-------------|
+| **clean** | Post-merge git cleanup — checkout main/master, pull, delete merged branches |
+| **gh-body-safe** | Safe `--body` flag handling for `gh pr create/edit` and `gh issue create/edit` |
 | **git-commit** | Conventional commit messages with auto-detected type/scope and secret scanning |
 | **git-safety-scan** | Pre-push scan for secrets, PII, and sensitive data |
-| **gh-pr-create** | Create GitHub PRs with properly formatted markdown bodies |
+| **mcp-reauth** | Manage MCP server OAuth tokens — list, clear, or force re-login |
+| **pr-review-address** | Address PR review feedback — fix code, push back with evidence, resolve threads |
 | **summon-the-knights-of-the-round-table** | Multi-model brainstorming with randomized debate roles |
 
 ### The Weekly Impact Summary Skill

@@ -171,6 +171,16 @@ If something breaks, use the restore script to remove all symlinks and optionall
 
 ## Custom Skills
 
+### clean
+Post-merge git cleanup — checks out main/master, pulls latest, deletes merged local branches, prunes remote-tracking branches, and verifies a clean working state.
+
+**Trigger:** "clean up", "rebased and merged", "cleanup branches", "back to main"
+
+### gh-body-safe
+Safe `--body` flag handling for all `gh` CLI commands that accept markdown bodies (`gh pr create/edit`, `gh issue create/edit`). Prevents PowerShell encoding bugs that silently corrupt backticks, em-dashes, and code spans.
+
+**Trigger:** Any `gh pr create`, `gh pr edit`, `gh issue create`, or `gh issue edit` command
+
 ### git-commit
 Conventional commit messages with [Chris Beams' 7 rules](https://cbea.ms/git-commit/). Auto-detects type and scope from your diff, scans for secrets, checks repo contribution guidelines, and generates properly formatted commit messages.
 
@@ -180,6 +190,16 @@ Conventional commit messages with [Chris Beams' 7 rules](https://cbea.ms/git-com
 Mandatory pre-push scan for secrets, PII, customer names, and sensitive data. Supports a user blocklist at `~/.copilot/sensitive-terms.txt`.
 
 **Trigger:** Automatically invoked before any `git push` or PR creation
+
+### mcp-reauth
+Manage MCP server OAuth tokens — list cached tokens, clear specific servers to force re-login, or clear all.
+
+**Trigger:** "re-login", "reauth", "wrong account", "switch account", "clear tokens"
+
+### pr-review-address
+Address PR review feedback end-to-end — examines all comments and review threads, makes code fixes for valid feedback, pushes back with reasoned replies on items that are wrong or counterproductive, and resolves all threads.
+
+**Trigger:** "address PR comments", "review the PR feedback", "fix PR review", "handle review comments"
 
 ### summon-the-knights-of-the-round-table
 Multi-model brainstorming using Claude Opus 4.6, GPT-5.3-Codex, and Gemini 3 Pro with randomized Devil's Advocate / Explorer / Steelman roles for structured debate.
