@@ -21,10 +21,17 @@ done
 
 # ─── Paths ──────────────────────────────────────────────────────────────────────
 COPILOT_DIR="$HOME/.copilot"
-# macOS OneDrive path (adjust if different)
-ONEDRIVE_DIR="$HOME/Library/CloudStorage/OneDrive-Microsoft"
-if [[ ! -d "$ONEDRIVE_DIR" ]]; then
+# Detect OneDrive sync folder: env var → macOS CloudStorage → Linux/fallback
+if [[ -n "${ONEDRIVE_BACKUP_DIR:-}" ]]; then
+  ONEDRIVE_DIR="$ONEDRIVE_BACKUP_DIR"
+elif [[ -n "${OneDriveCommercial:-}" ]]; then
+  ONEDRIVE_DIR="$OneDriveCommercial"
+elif [[ -d "$HOME/Library/CloudStorage/OneDrive-Microsoft" ]]; then
+  ONEDRIVE_DIR="$HOME/Library/CloudStorage/OneDrive-Microsoft"
+elif [[ -d "$HOME/OneDrive - Microsoft" ]]; then
   ONEDRIVE_DIR="$HOME/OneDrive - Microsoft"
+else
+  ONEDRIVE_DIR=""
 fi
 BACKUP_DIR="$ONEDRIVE_DIR/Documents/Copilot Config Backup"
 
@@ -63,7 +70,7 @@ for file in "${CONFIG_FILES[@]}"; do
     cp "$src" "$dst"
     size=$(du -h "$src" | cut -f1)
     echo "  [OK] $file ($size)"
-    ((copied++))
+    ((++copied))
   else
     echo "  [--] $file (not found, skipping)"
   fi

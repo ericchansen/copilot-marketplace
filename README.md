@@ -187,7 +187,10 @@ Some personalization files live in `~/.copilot/` but aren't tracked by this repo
 ./backup.sh --skip-session       # Config files only (faster)
 ```
 
-**Where backups go:** `OneDrive/Documents/Copilot Config Backup/`
+**Where backups go:** `<OneDrive sync root>/Documents/Copilot Config Backup/`
+- **Windows:** `C:\Users\<you>\OneDrive - Microsoft\Documents\Copilot Config Backup\`
+- **macOS:** `~/Library/CloudStorage/OneDrive-Microsoft/Documents/Copilot Config Backup/`
+- Override with `ONEDRIVE_BACKUP_DIR` env var if your sync folder has a different name
 - Config files are overwritten in place (latest version only)
 - Session store snapshots are date-stamped in `session-snapshots/` with a `session-store-latest.db` for quick restore
 - OneDrive sync client handles cloud upload automatically
@@ -209,10 +212,19 @@ After a fresh OS install:
 
 1. Sign into OneDrive for Business and wait for sync to complete
 2. Clone this repo and run setup:
+
+   **Windows (PowerShell):**
+   ```powershell
+   git clone git@github.com:ericchansen/copilot-config.git ~/repos/copilot-config
+   cd ~/repos/copilot-config
+   ./setup.ps1 -Work
+   ```
+
+   **macOS/Linux (Bash):**
    ```bash
    git clone git@github.com:ericchansen/copilot-config.git ~/repos/copilot-config
    cd ~/repos/copilot-config
-   ./setup.ps1 -Work     # or ./setup.sh --work
+   ./setup.sh --work
    ```
 3. Copy personalization files back from OneDrive:
    ```powershell

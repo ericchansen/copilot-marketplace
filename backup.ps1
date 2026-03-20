@@ -27,7 +27,14 @@ $ErrorActionPreference = "Stop"
 
 # ─── Paths ──────────────────────────────────────────────────────────────────────
 $copilotDir = Join-Path $env:USERPROFILE ".copilot"
-$oneDriveDir = Join-Path $env:USERPROFILE "OneDrive - Microsoft"
+# Detect OneDrive sync folder: env var override → OneDriveCommercial → default path
+if ($env:ONEDRIVE_BACKUP_DIR) {
+    $oneDriveDir = $env:ONEDRIVE_BACKUP_DIR
+} elseif ($env:OneDriveCommercial) {
+    $oneDriveDir = $env:OneDriveCommercial
+} else {
+    $oneDriveDir = Join-Path $env:USERPROFILE "OneDrive - Microsoft"
+}
 $backupDir = Join-Path $oneDriveDir "Documents" "Copilot Config Backup"
 
 # ─── Validate ───────────────────────────────────────────────────────────────────
