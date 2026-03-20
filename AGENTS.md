@@ -23,6 +23,7 @@ This repo manages GitHub Copilot CLI configuration, custom skills, and MCP/LSP s
 | `.copilot/skills/` | Custom skills (local to this repo) | Directory junctions |
 | `setup.ps1` / `setup.sh` | Install: symlink configs, patch settings, link skills, clean legacy junctions | — |
 | `restore.ps1` / `restore.sh` | Uninstall: remove symlinks, optionally restore backups | — |
+| `backup.ps1` / `backup.sh` | Back up untracked config + session store to OneDrive | — |
 | `sync-skills.ps1` / `sync-skills.sh` | Adopt untracked skills from `~/.copilot/skills/` | — |
 
 ## Adding a New Tracked Config File

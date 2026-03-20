@@ -160,6 +160,40 @@ git pull
 ./setup.sh    # macOS/Linux (Bash)
 ```
 
+## Backing Up
+
+Some personalization files live in `~/.copilot/` but aren't tracked by this repo (they contain PII, secrets blocklists, or machine-specific data). The backup script copies them to your OneDrive sync folder so they survive machine wipes.
+
+**What gets backed up:**
+
+| File | Purpose |
+|------|---------|
+| `sensitive-terms.txt` | PII/secrets blocklist for safety scans |
+| `email-signature.html` | Outlook email signature |
+| `email-style.md` | Email drafting style guide |
+| `permissions-config.json` | Tool permission grants |
+| `powerbi-mcp-proxy.mjs` | Power BI MCP stdio↔HTTP proxy |
+| `session-store.db` | All past Copilot CLI session history (timestamped snapshots, last 10 kept) |
+
+**Run a backup:**
+
+```powershell
+./backup.ps1                     # Full backup (config + session store)
+./backup.ps1 -SkipSessionStore   # Config files only (faster)
+```
+
+```bash
+./backup.sh                      # Full backup (config + session store)
+./backup.sh --skip-session       # Config files only (faster)
+```
+
+**Where backups go:** `OneDrive/Documents/Copilot Config Backup/`
+- Config files are overwritten in place (latest version only)
+- Session store snapshots are date-stamped in `session-snapshots/` with a `session-store-latest.db` for quick restore
+- OneDrive sync client handles cloud upload automatically
+
+> **Tip:** Run `./backup.ps1` periodically (weekly, or before major changes). Session history is the only thing that can't be recreated.
+
 ## Restoring
 
 If something breaks, use the restore script to remove all symlinks and optionally restore from backup:
@@ -168,6 +202,39 @@ If something breaks, use the restore script to remove all symlinks and optionall
 ./restore.ps1   # Windows (PowerShell)
 ./restore.sh    # macOS/Linux (Bash)
 ```
+
+### Restoring from a machine wipe
+
+After a fresh OS install:
+
+1. Sign into OneDrive for Business and wait for sync to complete
+2. Clone this repo and run setup:
+   ```bash
+   git clone git@github.com:ericchansen/copilot-config.git ~/repos/copilot-config
+   cd ~/repos/copilot-config
+   ./setup.ps1 -Work     # or ./setup.sh --work
+   ```
+3. Copy personalization files back from OneDrive:
+   ```powershell
+   $backup = "$env:USERPROFILE\OneDrive - Microsoft\Documents\Copilot Config Backup"
+   $copilot = "$env:USERPROFILE\.copilot"
+   Copy-Item "$backup\sensitive-terms.txt" $copilot
+   Copy-Item "$backup\email-signature.html" $copilot
+   Copy-Item "$backup\email-style.md" $copilot
+   Copy-Item "$backup\permissions-config.json" $copilot
+   Copy-Item "$backup\powerbi-mcp-proxy.mjs" $copilot
+   ```
+4. Restore session history (optional):
+   ```powershell
+   Copy-Item "$backup\session-snapshots\session-store-latest.db" "$copilot\session-store.db"
+   ```
+5. Re-install plugins:
+   ```bash
+   copilot plugin install mcaps-microsoft/MSX-MCP
+   # Plus any other plugins from `copilot plugin list`
+   ```
+6. Re-authenticate MCP servers (Teams, Outlook, SharePoint will prompt on first use)
+7. Set environment variables (see [Environment Variables](#environment-variables))
 
 ## Custom Skills
 
