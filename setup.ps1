@@ -1542,10 +1542,13 @@ if (-not $NonInteractive) {
     # Language servers — install if missing; lsp-config.json is generated in Step 11b
 
     # TypeScript Language Server (npm)
-    if (Get-Command typescript-language-server -ErrorAction SilentlyContinue) {
+    if (Validate-LspBinary -Command "typescript-language-server" -Arguments @("--stdio")) {
         Write-Success "typescript-language-server already installed"
         $script:summary.OptionalSkipped += "typescript-language-server"
     } else {
+        if (Get-Command typescript-language-server -ErrorAction SilentlyContinue) {
+            Write-Warn "typescript-language-server found on PATH but not functional"
+        }
         $answer = Read-Host "Install TypeScript Language Server? (code intelligence for .ts files) [Y/n]"
         if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
             try {
@@ -1569,10 +1572,13 @@ if (-not $NonInteractive) {
     }
 
     # Pyright Language Server (npm)
-    if (Get-Command pyright-langserver -ErrorAction SilentlyContinue) {
+    if (Validate-LspBinary -Command "pyright-langserver" -Arguments @("--stdio")) {
         Write-Success "pyright-langserver already installed"
         $script:summary.OptionalSkipped += "pyright-langserver"
     } else {
+        if (Get-Command pyright-langserver -ErrorAction SilentlyContinue) {
+            Write-Warn "pyright-langserver found on PATH but not functional"
+        }
         $answer = Read-Host "Install Pyright Language Server? (code intelligence for .py files) [Y/n]"
         if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
             try {
@@ -1596,10 +1602,13 @@ if (-not $NonInteractive) {
     }
 
     # Rust Analyzer (rustup component)
-    if (Get-Command rust-analyzer -ErrorAction SilentlyContinue) {
+    if (Validate-LspBinary -Command "rust-analyzer" -Arguments @()) {
         Write-Success "rust-analyzer already installed"
         $script:summary.OptionalSkipped += "rust-analyzer"
     } else {
+        if (Get-Command rust-analyzer -ErrorAction SilentlyContinue) {
+            Write-Warn "rust-analyzer found on PATH but not functional"
+        }
         if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) {
             Write-Warn "rust-analyzer requires rustup (not found) — skipping"
             $script:summary.OptionalSkipped += "rust-analyzer"

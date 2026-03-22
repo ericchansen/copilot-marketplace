@@ -1446,10 +1446,13 @@ if ! $NON_INTERACTIVE; then
     # Language servers — install if missing; lsp-config.json is generated in Step 11b
 
     # --- LSP: typescript-language-server (npm) ---
-    if command -v typescript-language-server &>/dev/null; then
+    if validate_lsp_binary typescript-language-server --stdio; then
         write_success "typescript-language-server already installed"
         SUMMARY_OPTIONAL_SKIPPED+=("typescript-language-server")
     else
+        if command -v typescript-language-server &>/dev/null; then
+            write_warn "typescript-language-server found on PATH but not functional"
+        fi
         read -rp "Install typescript-language-server? (TypeScript/JS code intelligence) [Y/n] " answer
         if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
             write_info "Installing typescript-language-server via npm..."
@@ -1467,10 +1470,13 @@ if ! $NON_INTERACTIVE; then
     fi
 
     # --- LSP: pyright-langserver (npm) ---
-    if command -v pyright-langserver &>/dev/null; then
+    if validate_lsp_binary pyright-langserver --stdio; then
         write_success "pyright-langserver already installed"
         SUMMARY_OPTIONAL_SKIPPED+=("pyright-langserver")
     else
+        if command -v pyright-langserver &>/dev/null; then
+            write_warn "pyright-langserver found on PATH but not functional"
+        fi
         read -rp "Install pyright-langserver? (Python code intelligence) [Y/n] " answer
         if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
             write_info "Installing pyright via npm..."
@@ -1488,10 +1494,13 @@ if ! $NON_INTERACTIVE; then
     fi
 
     # --- LSP: rust-analyzer (rustup) ---
-    if command -v rust-analyzer &>/dev/null; then
+    if validate_lsp_binary rust-analyzer; then
         write_success "rust-analyzer already installed"
         SUMMARY_OPTIONAL_SKIPPED+=("rust-analyzer")
     else
+        if command -v rust-analyzer &>/dev/null; then
+            write_warn "rust-analyzer found on PATH but not functional"
+        fi
         if ! command -v rustup &>/dev/null; then
             write_warn "rust-analyzer requires rustup (not found)"
             write_info "Skipped rust-analyzer"
