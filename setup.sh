@@ -1546,6 +1546,17 @@ if ! $NON_INTERACTIVE; then
     else
         read -rp "Install MarkItDown? (converts PDF/Word/Excel to markdown) [Y/n] " answer
         if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
+            # Ensure pipx is available (required on modern distros with externally-managed Python)
+            if ! command -v pipx &>/dev/null; then
+                if command -v apt &>/dev/null; then
+                    write_info "Installing pipx (required for Python app installs)..."
+                    sudo apt install -y pipx 2>&1
+                elif command -v brew &>/dev/null; then
+                    write_info "Installing pipx via brew..."
+                    brew install pipx 2>&1
+                fi
+            fi
+
             if command -v pipx &>/dev/null; then
                 write_info "Installing markitdown[all] via pipx..."
                 if pipx install 'markitdown[all]' 2>&1; then
@@ -1561,7 +1572,7 @@ if ! $NON_INTERACTIVE; then
                     write_success "MarkItDown installed"
                     SUMMARY_OPTIONAL_INSTALLED+=("markitdown")
                 else
-                    write_err "MarkItDown install failed (try: sudo apt install pipx && pipx install 'markitdown[all]')"
+                    write_err "MarkItDown install failed"
                     SUMMARY_OPTIONAL_FAILED+=("markitdown")
                 fi
             else
