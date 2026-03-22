@@ -38,6 +38,14 @@ if ! command -v jq &>/dev/null; then
     exit 1
 fi
 
+# Source nvm if installed but not loaded (common when running setup.sh directly,
+# since nvm is sourced from .bashrc which only runs for interactive shells)
+if ! command -v nvm &>/dev/null && [[ -s "$HOME/.nvm/nvm.sh" ]]; then
+    export NVM_DIR="$HOME/.nvm"
+    # shellcheck disable=SC1091
+    source "$NVM_DIR/nvm.sh"
+fi
+
 # =============================================================================
 # Configuration
 # =============================================================================
@@ -191,10 +199,12 @@ validate_lsp_binary() {
         return 0
     fi
 
-    # Start the binary briefly — a functional server stays alive (timeout kills
-    # it, exit 124) or exits cleanly (exit 0). A broken binary crashes immediately.
+    # Start the binary briefly — a functional server stays alive when stdin is
+    # open (timeout kills it, exit 124). A broken binary crashes immediately.
+    # We use process substitution to keep stdin open instead of /dev/null,
+    # because LSP servers exit non-zero when stdin closes immediately.
     local exit_code
-    "$timeout_bin" 2 "$cmd" "${args[@]}" </dev/null >/dev/null 2>&1
+    "$timeout_bin" 2 "$cmd" "${args[@]}" < <(sleep 5) >/dev/null 2>&1
     exit_code=$?
 
     if [[ $exit_code -eq 0 || $exit_code -eq 124 ]]; then
@@ -1314,57 +1324,60 @@ SUMMARY_MCP_GENERATED=true
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 11b: Generate lsp-config.json
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 11b: Generate lsp-config.json"
 
 LSP_SERVERS_JSON="$REPO_ROOT/lsp-servers.json"
-LSP_CONFIG='{"lspServers":{}}'
-LSP_INCLUDED=0
-LSP_SKIPPED=()
 
-if [[ -f "$LSP_SERVERS_JSON" ]]; then
-    while IFS= read -r server_name; do
-        server_json=$(jq -c --arg name "$server_name" '.lspServers[$name]' "$LSP_SERVERS_JSON")
-        cmd=$(echo "$server_json" | jq -r '.command')
-        args_json=$(echo "$server_json" | jq -r '.args // [] | .[]')
-        
-        # Convert args JSON array to bash array, avoiding a spurious
-        # empty-string element when there are no args (e.g., rust-analyzer).
-        cmd_args=()
-        if [[ -n "$args_json" ]]; then
-            readarray -t cmd_args <<< "$args_json"
-        fi
-        
-        if validate_lsp_binary "$cmd" "${cmd_args[@]}"; then
-            LSP_CONFIG=$(echo "$LSP_CONFIG" | jq --arg name "$server_name" --argjson entry "$server_json" \
-                '.lspServers[$name] = $entry')
-            write_success "$server_name — validated and included"
-            ((LSP_INCLUDED++))
-        else
-            LSP_SKIPPED+=("$server_name")
-            write_warn "$server_name — binary not functional, skipped"
-        fi
-    done < <(jq -r '.lspServers | keys[]' "$LSP_SERVERS_JSON")
-else
-    write_warn "lsp-servers.json not found in repo — skipping LSP config generation"
-fi
+generate_lsp_config() {
+    local label="${1:-Step 11b: Generate lsp-config.json}"
+    write_step "$label"
 
-LSP_CONFIG_PATH="$COPILOT_HOME/lsp-config.json"
-# Remove stale symlink so redirect can create a regular file
-if [ -L "$LSP_CONFIG_PATH" ]; then
-    rm -f "$LSP_CONFIG_PATH"
-fi
+    LSP_CONFIG='{"lspServers":{}}'
+    LSP_INCLUDED=0
+    LSP_SKIPPED=()
 
-if ((LSP_INCLUDED > 0)); then
-    echo "$LSP_CONFIG" | jq '.' > "$LSP_CONFIG_PATH"
-    write_success "Generated $LSP_CONFIG_PATH ($LSP_INCLUDED servers)"
-else
-    # Write empty config to prevent stale configs from being used
-    echo '{"lspServers":{}}' | jq '.' > "$LSP_CONFIG_PATH"
-    write_info "No working LSP servers found — generated empty config"
-fi
+    if [[ -f "$LSP_SERVERS_JSON" ]]; then
+        while IFS= read -r server_name; do
+            server_json=$(jq -c --arg name "$server_name" '.lspServers[$name]' "$LSP_SERVERS_JSON")
+            cmd=$(echo "$server_json" | jq -r '.command')
+            args_json=$(echo "$server_json" | jq -r '.args // [] | .[]')
 
-SUMMARY_LSP_GENERATED=true
-SUMMARY_LSP_COUNT=$LSP_INCLUDED
+            cmd_args=()
+            if [[ -n "$args_json" ]]; then
+                readarray -t cmd_args <<< "$args_json"
+            fi
+
+            if validate_lsp_binary "$cmd" "${cmd_args[@]}"; then
+                LSP_CONFIG=$(echo "$LSP_CONFIG" | jq --arg name "$server_name" --argjson entry "$server_json" \
+                    '.lspServers[$name] = $entry')
+                write_success "$server_name — validated and included"
+                ((LSP_INCLUDED++))
+            else
+                LSP_SKIPPED+=("$server_name")
+                write_warn "$server_name — binary not functional, skipped"
+            fi
+        done < <(jq -r '.lspServers | keys[]' "$LSP_SERVERS_JSON")
+    else
+        write_warn "lsp-servers.json not found in repo — skipping LSP config generation"
+    fi
+
+    LSP_CONFIG_PATH="$COPILOT_HOME/lsp-config.json"
+    if [ -L "$LSP_CONFIG_PATH" ]; then
+        rm -f "$LSP_CONFIG_PATH"
+    fi
+
+    if ((LSP_INCLUDED > 0)); then
+        echo "$LSP_CONFIG" | jq '.' > "$LSP_CONFIG_PATH"
+        write_success "Generated $LSP_CONFIG_PATH ($LSP_INCLUDED servers)"
+    else
+        echo '{"lspServers":{}}' | jq '.' > "$LSP_CONFIG_PATH"
+        write_info "No working LSP servers found — generated empty config"
+    fi
+
+    SUMMARY_LSP_GENERATED=true
+    SUMMARY_LSP_COUNT=$LSP_INCLUDED
+}
+
+generate_lsp_config
 SUMMARY_LSP_SKIPPED=("${LSP_SKIPPED[@]}")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1443,7 +1456,16 @@ if ! $NON_INTERACTIVE; then
     echo ""
 
     # --- LSP Server Binaries ---
-    # Language servers — install if missing; lsp-config.json is generated in Step 11b
+    # Language servers give the Copilot agent deeper understanding of your code.
+    # They provide go-to-definition, find-references, and type information — the
+    # same intelligence your IDE uses. Without them the agent still works, but
+    # relies on text-based search instead.
+
+    # Detect WSL to give better explanations when Windows binaries are found
+    IS_WSL=false
+    if [[ -f /proc/version ]] && grep -qi microsoft /proc/version 2>/dev/null; then
+        IS_WSL=true
+    fi
 
     # Determine if npm global install needs sudo (system-managed Node, e.g., apt)
     NPM_NEEDS_SUDO=false
@@ -1455,6 +1477,7 @@ if ! $NON_INTERACTIVE; then
     fi
     npm_install_g() {
         if $NPM_NEEDS_SUDO; then
+            write_info "Using sudo (Node was installed system-wide, so global packages need root)"
             sudo npm install -g "$@"
         else
             npm install -g "$@"
@@ -1467,9 +1490,18 @@ if ! $NON_INTERACTIVE; then
         SUMMARY_OPTIONAL_SKIPPED+=("typescript-language-server")
     else
         if command -v typescript-language-server &>/dev/null; then
-            write_warn "typescript-language-server found on PATH but not functional"
+            if $IS_WSL; then
+                write_warn "typescript-language-server found but it's a Windows binary — can't run in WSL"
+                write_info "A native Linux version is needed inside WSL."
+            else
+                write_warn "typescript-language-server found on PATH but not working"
+            fi
         fi
-        read -rp "Install typescript-language-server? (TypeScript/JS code intelligence) [Y/n] " answer
+        echo ""
+        echo "  TypeScript Language Server gives the agent code intelligence for"
+        echo "  .ts, .tsx, .js, and .jsx files (types, definitions, references)."
+        echo ""
+        read -rp "  Install typescript-language-server? [Y/n] " answer
         if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
             write_info "Installing typescript-language-server via npm..."
             if npm_install_g typescript-language-server typescript 2>&1; then
@@ -1491,9 +1523,18 @@ if ! $NON_INTERACTIVE; then
         SUMMARY_OPTIONAL_SKIPPED+=("pyright-langserver")
     else
         if command -v pyright-langserver &>/dev/null; then
-            write_warn "pyright-langserver found on PATH but not functional"
+            if $IS_WSL; then
+                write_warn "pyright-langserver found but it's a Windows binary — can't run in WSL"
+                write_info "A native Linux version is needed inside WSL."
+            else
+                write_warn "pyright-langserver found on PATH but not working"
+            fi
         fi
-        read -rp "Install pyright-langserver? (Python code intelligence) [Y/n] " answer
+        echo ""
+        echo "  Pyright gives the agent code intelligence for Python files"
+        echo "  (type checking, definitions, references)."
+        echo ""
+        read -rp "  Install pyright-langserver? [Y/n] " answer
         if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
             write_info "Installing pyright via npm..."
             if npm_install_g pyright 2>&1; then
@@ -1515,14 +1556,20 @@ if ! $NON_INTERACTIVE; then
         SUMMARY_OPTIONAL_SKIPPED+=("rust-analyzer")
     else
         if command -v rust-analyzer &>/dev/null; then
-            write_warn "rust-analyzer found on PATH but not functional"
+            if $IS_WSL; then
+                write_warn "rust-analyzer found but it's a Windows binary — can't run in WSL"
+            else
+                write_warn "rust-analyzer found on PATH but not working"
+            fi
         fi
         if ! command -v rustup &>/dev/null; then
-            write_warn "rust-analyzer requires rustup (not found)"
-            write_info "Skipped rust-analyzer"
+            write_info "rust-analyzer requires the Rust toolchain (rustup) — not installed, skipping"
             SUMMARY_OPTIONAL_SKIPPED+=("rust-analyzer")
         else
-            read -rp "Install rust-analyzer? (Rust code intelligence) [Y/n] " answer
+            echo ""
+            echo "  rust-analyzer gives the agent code intelligence for Rust files."
+            echo ""
+            read -rp "  Install rust-analyzer? [Y/n] " answer
             if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
                 write_info "Installing rust-analyzer via rustup..."
                 if rustup component add rust-analyzer 2>&1; then
@@ -1544,16 +1591,48 @@ if ! $NON_INTERACTIVE; then
         write_success "MarkItDown already installed"
         SUMMARY_OPTIONAL_SKIPPED+=("markitdown")
     else
-        read -rp "Install MarkItDown? (converts PDF/Word/Excel to markdown) [Y/n] " answer
+        echo ""
+        echo "  MarkItDown lets the agent read PDF, Word, Excel, and PowerPoint"
+        echo "  files by converting them to markdown text."
+        echo ""
+        read -rp "  Install MarkItDown? [Y/n] " answer
         if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
-            # Ensure pipx is available (required on modern distros with externally-managed Python)
+            # Modern Linux distros (Ubuntu 23.04+, Fedora 38+) block 'pip install'
+            # system-wide to prevent breaking the OS Python. pipx solves this by
+            # installing Python apps in their own isolated environments.
             if ! command -v pipx &>/dev/null; then
+                echo ""
+                write_info "MarkItDown is a Python app. Modern Linux distros require 'pipx'"
+                write_info "to install Python apps safely (it creates an isolated environment"
+                write_info "so the app doesn't interfere with your system Python)."
+                echo ""
                 if command -v apt &>/dev/null; then
-                    write_info "Installing pipx (required for Python app installs)..."
-                    sudo apt install -y pipx 2>&1
+                    read -rp "  Install pipx? (sudo apt install pipx) [Y/n] " pipx_answer
+                    if [[ -z "$pipx_answer" || "$pipx_answer" == "y" || "$pipx_answer" == "Y" ]]; then
+                        write_info "Installing pipx..."
+                        if sudo apt install -y pipx 2>&1; then
+                            write_success "pipx installed"
+                        else
+                            write_err "pipx install failed"
+                        fi
+                    else
+                        write_info "Skipped pipx — cannot install MarkItDown without it"
+                    fi
                 elif command -v brew &>/dev/null; then
-                    write_info "Installing pipx via brew..."
-                    brew install pipx 2>&1
+                    read -rp "  Install pipx via brew? [Y/n] " pipx_answer
+                    if [[ -z "$pipx_answer" || "$pipx_answer" == "y" || "$pipx_answer" == "Y" ]]; then
+                        write_info "Installing pipx..."
+                        if brew install pipx 2>&1; then
+                            write_success "pipx installed"
+                        else
+                            write_err "pipx install failed"
+                        fi
+                    else
+                        write_info "Skipped pipx — cannot install MarkItDown without it"
+                    fi
+                else
+                    write_warn "Could not find apt or brew to install pipx."
+                    write_info "Install pipx manually (https://pipx.pypa.io), then re-run setup."
                 fi
             fi
 
@@ -1604,7 +1683,12 @@ if ! $NON_INTERACTIVE; then
             write_info "Skipped QMD"
             SUMMARY_OPTIONAL_SKIPPED+=("qmd")
         else
-            read -rp "Install QMD? (local hybrid search for memory, requires Node.js 22+) [Y/n] " answer
+            echo ""
+            echo "  QMD (Query MarkDown) provides local hybrid search for the"
+            echo "  agent's memory — it lets the agent search its past conversations"
+            echo "  and session notes more effectively. Requires Node.js 22+."
+            echo ""
+            read -rp "  Install QMD? [Y/n] " answer
             if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
                 write_info "Installing @tobilu/qmd via npm..."
                 if npm_install_g @tobilu/qmd 2>&1; then
@@ -1632,7 +1716,12 @@ if ! $NON_INTERACTIVE; then
         write_success "Playwright Edge driver already installed"
         SUMMARY_OPTIONAL_SKIPPED+=("playwright-edge")
     else
-        read -rp "Install Playwright Edge driver? (needed for browser automation) [Y/n] " answer
+        echo ""
+        echo "  Playwright lets the agent interact with web browsers — take"
+        echo "  screenshots, click buttons, fill forms, and verify web apps."
+        echo "  The Edge driver is used for browser automation."
+        echo ""
+        read -rp "  Install Playwright Edge driver? [Y/n] " answer
         if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
             write_info "Installing Playwright Edge driver..."
             if npx playwright install msedge 2>&1; then
@@ -1647,6 +1736,17 @@ if ! $NON_INTERACTIVE; then
             SUMMARY_OPTIONAL_SKIPPED+=("playwright-edge")
         fi
     fi
+fi
+
+# Re-generate lsp-config.json if optional deps installed any LSP servers
+LSP_INSTALLED_ANY=false
+for item in "${SUMMARY_OPTIONAL_INSTALLED[@]}"; do
+    case "$item" in
+        typescript-language-server|pyright-langserver|rust-analyzer) LSP_INSTALLED_ANY=true; break ;;
+    esac
+done
+if $LSP_INSTALLED_ANY; then
+    generate_lsp_config "Regenerate lsp-config.json (new servers installed)"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────

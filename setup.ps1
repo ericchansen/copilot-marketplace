@@ -202,12 +202,14 @@ function Validate-LspBinary {
         }
         
         $proc = [System.Diagnostics.Process]::Start($psi)
-        $proc.StandardInput.Close()
+        # Don't close stdin — LSP servers exit immediately when stdin closes.
+        # Leave it open so a functional server stays alive for the timeout.
         $exited = $proc.WaitForExit(2000)
         
         if (-not $exited) {
             # Still running after 2s — binary is functional
             $proc.Kill()
+            $proc.WaitForExit(1000)
             return $true
         }
         
@@ -1400,62 +1402,68 @@ $script:summary.McpConfigGenerated = $true
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 11b: Generate lsp-config.json
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 11b: Generate lsp-config.json"
 
 $lspServersPath = Join-Path $repoRoot "lsp-servers.json"
-$lspConfig = [ordered]@{ lspServers = [ordered]@{} }
-$lspIncluded = 0
-$lspSkipped = @()
 
-if (Test-Path $lspServersPath) {
-    $lspServers = Get-Content $lspServersPath -Raw | ConvertFrom-Json
-    
-    foreach ($prop in $lspServers.lspServers.PSObject.Properties) {
-        $serverName = $prop.Name
-        $serverDef = $prop.Value
-        $cmd = $serverDef.command
-        $args = @()
-        if ($serverDef.args) { $args = @($serverDef.args) }
-        
-        if (Validate-LspBinary -Command $cmd -Arguments $args) {
-            $entry = [ordered]@{}
-            $entry["command"] = $serverDef.command
-            $entry["args"] = @($serverDef.args)
-            $entry["fileExtensions"] = [ordered]@{}
-            foreach ($ext in $serverDef.fileExtensions.PSObject.Properties) {
-                $entry["fileExtensions"][$ext.Name] = $ext.Value
+function Generate-LspConfig {
+    param([string]$Label = "Step 11b: Generate lsp-config.json")
+    Write-Step $Label
+
+    $lspConfig = [ordered]@{ lspServers = [ordered]@{} }
+    $lspIncluded = 0
+    $lspSkipped = @()
+
+    if (Test-Path $lspServersPath) {
+        $lspServers = Get-Content $lspServersPath -Raw | ConvertFrom-Json
+
+        foreach ($prop in $lspServers.lspServers.PSObject.Properties) {
+            $serverName = $prop.Name
+            $serverDef = $prop.Value
+            $cmd = $serverDef.command
+            $args = @()
+            if ($serverDef.args) { $args = @($serverDef.args) }
+
+            if (Validate-LspBinary -Command $cmd -Arguments $args) {
+                $entry = [ordered]@{}
+                $entry["command"] = $serverDef.command
+                $entry["args"] = @($serverDef.args)
+                $entry["fileExtensions"] = [ordered]@{}
+                foreach ($ext in $serverDef.fileExtensions.PSObject.Properties) {
+                    $entry["fileExtensions"][$ext.Name] = $ext.Value
+                }
+                $lspConfig.lspServers[$serverName] = $entry
+                Write-Success "$serverName — validated and included"
+                $lspIncluded++
+            } else {
+                $lspSkipped += $serverName
+                Write-Warn "$serverName — binary not functional, skipped"
             }
-            $lspConfig.lspServers[$serverName] = $entry
-            Write-Success "$serverName — validated and included"
-            $lspIncluded++
-        } else {
-            $lspSkipped += $serverName
-            Write-Warn "$serverName — binary not functional, skipped"
+        }
+    } else {
+        Write-Warn "lsp-servers.json not found in repo — skipping LSP config generation"
+    }
+
+    $lspConfigPath = Join-Path $copilotHome "lsp-config.json"
+    if (Test-Path $lspConfigPath) {
+        $item = Get-Item $lspConfigPath -Force
+        if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            Remove-Item $lspConfigPath -Force
         }
     }
-} else {
-    Write-Warn "lsp-servers.json not found in repo — skipping LSP config generation"
-}
 
-$lspConfigPath = Join-Path $copilotHome "lsp-config.json"
-# Remove stale symlink
-if (Test-Path $lspConfigPath) {
-    $item = Get-Item $lspConfigPath -Force
-    if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
-        Remove-Item $lspConfigPath -Force
+    $lspConfig | ConvertTo-Json -Depth 10 | Set-Content $lspConfigPath -Encoding UTF8
+    if ($lspIncluded -gt 0) {
+        Write-Success "Generated $lspConfigPath ($lspIncluded servers)"
+    } else {
+        Write-Info "No working LSP servers found — generated empty config"
     }
+
+    $script:summary.LspConfigGenerated = $true
+    $script:summary.LspCount = $lspIncluded
+    $script:summary.LspSkipped = $lspSkipped
 }
 
-$lspConfig | ConvertTo-Json -Depth 10 | Set-Content $lspConfigPath -Encoding UTF8
-if ($lspIncluded -gt 0) {
-    Write-Success "Generated $lspConfigPath ($lspIncluded servers)"
-} else {
-    Write-Info "No working LSP servers found — generated empty config"
-}
-
-$script:summary.LspConfigGenerated = $true
-$script:summary.LspCount = $lspIncluded
-$script:summary.LspSkipped = $lspSkipped
+Generate-LspConfig
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 12: Clean up stale skill junctions
@@ -1539,7 +1547,10 @@ if (-not $NonInteractive) {
     Write-Host ""
 
     # --- LSP Server Binaries ---
-    # Language servers — install if missing; lsp-config.json is generated in Step 11b
+    # Language servers give the Copilot agent deeper understanding of your code.
+    # They provide go-to-definition, find-references, and type information — the
+    # same intelligence your IDE uses. Without them the agent still works, but
+    # relies on text-based search instead.
 
     # TypeScript Language Server (npm)
     if (Validate-LspBinary -Command "typescript-language-server" -Arguments @("--stdio")) {
@@ -1547,9 +1558,13 @@ if (-not $NonInteractive) {
         $script:summary.OptionalSkipped += "typescript-language-server"
     } else {
         if (Get-Command typescript-language-server -ErrorAction SilentlyContinue) {
-            Write-Warn "typescript-language-server found on PATH but not functional"
+            Write-Warn "typescript-language-server found on PATH but not working"
         }
-        $answer = Read-Host "Install TypeScript Language Server? (code intelligence for .ts files) [Y/n]"
+        Write-Host ""
+        Write-Host "  TypeScript Language Server gives the agent code intelligence for"
+        Write-Host "  .ts, .tsx, .js, and .jsx files (types, definitions, references)."
+        Write-Host ""
+        $answer = Read-Host "  Install typescript-language-server? [Y/n]"
         if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
             try {
                 Write-Info "Installing typescript-language-server and typescript via npm..."
@@ -1577,9 +1592,13 @@ if (-not $NonInteractive) {
         $script:summary.OptionalSkipped += "pyright-langserver"
     } else {
         if (Get-Command pyright-langserver -ErrorAction SilentlyContinue) {
-            Write-Warn "pyright-langserver found on PATH but not functional"
+            Write-Warn "pyright-langserver found on PATH but not working"
         }
-        $answer = Read-Host "Install Pyright Language Server? (code intelligence for .py files) [Y/n]"
+        Write-Host ""
+        Write-Host "  Pyright gives the agent code intelligence for Python files"
+        Write-Host "  (type checking, definitions, references)."
+        Write-Host ""
+        $answer = Read-Host "  Install pyright-langserver? [Y/n]"
         if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
             try {
                 Write-Info "Installing pyright via npm..."
@@ -1607,13 +1626,16 @@ if (-not $NonInteractive) {
         $script:summary.OptionalSkipped += "rust-analyzer"
     } else {
         if (Get-Command rust-analyzer -ErrorAction SilentlyContinue) {
-            Write-Warn "rust-analyzer found on PATH but not functional"
+            Write-Warn "rust-analyzer found on PATH but not working"
         }
         if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) {
-            Write-Warn "rust-analyzer requires rustup (not found) — skipping"
+            Write-Info "rust-analyzer requires the Rust toolchain (rustup) — not installed, skipping"
             $script:summary.OptionalSkipped += "rust-analyzer"
         } else {
-            $answer = Read-Host "Install rust-analyzer? (code intelligence for .rs files, via rustup) [Y/n]"
+            Write-Host ""
+            Write-Host "  rust-analyzer gives the agent code intelligence for Rust files."
+            Write-Host ""
+            $answer = Read-Host "  Install rust-analyzer? [Y/n]"
             if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
                 try {
                     Write-Info "Installing rust-analyzer via rustup..."
@@ -1641,7 +1663,11 @@ if (-not $NonInteractive) {
         Write-Success "MarkItDown already installed"
         $script:summary.OptionalSkipped += "markitdown"
     } else {
-        $answer = Read-Host "Install MarkItDown? (converts PDF/Word/Excel to markdown) [Y/n]"
+        Write-Host ""
+        Write-Host "  MarkItDown lets the agent read PDF, Word, Excel, and PowerPoint"
+        Write-Host "  files by converting them to markdown text."
+        Write-Host ""
+        $answer = Read-Host "  Install MarkItDown? [Y/n]"
         if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
             # Ensure pipx is available
             if (-not (Get-Command pipx -ErrorAction SilentlyContinue)) {
@@ -1709,7 +1735,12 @@ if (-not $NonInteractive) {
             Write-Info "Skipped QMD"
             $script:summary.OptionalSkipped += "qmd"
         } else {
-            $answer = Read-Host "Install QMD? (local hybrid search for memory, requires Node.js 22+) [Y/n]"
+            Write-Host ""
+            Write-Host "  QMD (Query MarkDown) provides local hybrid search for the"
+            Write-Host "  agent's memory — it lets the agent search its past conversations"
+            Write-Host "  and session notes more effectively. Requires Node.js 22+."
+            Write-Host ""
+            $answer = Read-Host "  Install QMD? [Y/n]"
             if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
                 try {
                     Write-Info "Installing @tobilu/qmd via npm..."
@@ -1743,7 +1774,12 @@ if (-not $NonInteractive) {
         Write-Success "Playwright Edge driver already installed"
         $script:summary.OptionalSkipped += "playwright-edge"
     } else {
-        $answer = Read-Host "Install Playwright Edge driver? (needed for browser automation) [Y/n]"
+        Write-Host ""
+        Write-Host "  Playwright lets the agent interact with web browsers — take"
+        Write-Host "  screenshots, click buttons, fill forms, and verify web apps."
+        Write-Host "  The Edge driver is used for browser automation."
+        Write-Host ""
+        $answer = Read-Host "  Install Playwright Edge driver? [Y/n]"
         if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
             try {
                 Write-Info "Installing Playwright Edge driver..."
@@ -1764,6 +1800,16 @@ if (-not $NonInteractive) {
             $script:summary.OptionalSkipped += "playwright-edge"
         }
     }
+}
+
+# Re-generate lsp-config.json if optional deps installed any LSP servers
+$lspItems = @("typescript-language-server", "pyright-langserver", "rust-analyzer")
+$lspInstalledAny = $false
+foreach ($item in $script:summary.OptionalInstalled) {
+    if ($lspItems -contains $item) { $lspInstalledAny = $true; break }
+}
+if ($lspInstalledAny) {
+    Generate-LspConfig -Label "Regenerate lsp-config.json (new servers installed)"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
