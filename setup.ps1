@@ -147,8 +147,8 @@ function Write-Warn($msg)    { Write-Host "  " -NoNewline; Write-Host "⚠" -For
 function Write-Err($msg)     { Write-Host "  " -NoNewline; Write-Host "✗" -ForegroundColor Red -NoNewline; Write-Host " $msg" }
 function Write-Step($msg)    { Write-Host ""; Write-Host "  $msg" -ForegroundColor Cyan }
 
-function Write-Header($text) {
-    $len = $text.Length
+function Write-Header($text, [int]$extraWidth = 0) {
+    $len = $text.Length + $extraWidth
     $pad = $len + 4
     $line = "─" * $pad
     Write-Host ""
@@ -599,7 +599,7 @@ function Get-SkillFolders {
 # Main Script
 # =============================================================================
 
-Write-Header "📦  Copilot Config & Skills Setup"
+Write-Header "📦  Copilot Config & Skills Setup" 1
 Write-Host ""
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1896,7 +1896,7 @@ if ($lspInstalledAny) {
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 13: Summary
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Header "✨  Setup Complete"
+Write-Header "✨  Setup Complete" 1
 Write-Host ""
 
 if ($script:summary.BackedUp) {
