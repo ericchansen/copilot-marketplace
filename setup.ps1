@@ -75,28 +75,6 @@ $plugins = @(
     @{ Name = "msx-mcp";  Source = "mcaps-microsoft/MSX-MCP"; Work = $true }
 )
 
-# Resolve whether to include work tools (plugins + Power BI MCP server)
-$includeWork = $false
-if ($Work) {
-    $includeWork = $true
-} elseif (-not $NonInteractive) {
-    $answer = Read-Host "  Include work tools? (MSX-MCP plugin + Power BI MCP) [y/N]"
-    if ($answer -eq "y" -or $answer -eq "Y") {
-        $includeWork = $true
-    }
-}
-
-# Resolve whether to clean orphan skills
-$includeCleanOrphans = $false
-if ($CleanOrphans) {
-    $includeCleanOrphans = $true
-} elseif (-not $NonInteractive) {
-    $answer = Read-Host "  Remove skills not managed by this repo? [y/N]"
-    if ($answer -eq "y" -or $answer -eq "Y") {
-        $includeCleanOrphans = $true
-    }
-}
-
 # =============================================================================
 # Counters for summary
 # =============================================================================
@@ -600,7 +578,31 @@ function Get-SkillFolders {
 # =============================================================================
 
 Write-Header "📦  Copilot Config & Skills Setup" 1
-Write-Host ""
+
+# =============================================================================
+# Interactive option prompts
+# =============================================================================
+
+$includeWork = $false
+if ($Work) {
+    $includeWork = $true
+} elseif (-not $NonInteractive) {
+    Write-Host ""
+    $answer = Read-Host "  Include work tools? (MSX-MCP plugin + Power BI MCP) [y/N]"
+    if ($answer -eq "y" -or $answer -eq "Y") {
+        $includeWork = $true
+    }
+}
+
+$includeCleanOrphans = $false
+if ($CleanOrphans) {
+    $includeCleanOrphans = $true
+} elseif (-not $NonInteractive) {
+    $answer = Read-Host "  Remove skills not managed by this repo? [y/N]"
+    if ($answer -eq "y" -or $answer -eq "Y") {
+        $includeCleanOrphans = $true
+    }
+}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Preflight: Git authentication
@@ -644,9 +646,9 @@ if ($sshResult -match "Hi .+!") {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 1: Backup ~/.copilot/
+# Backup
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 1 · Backup"
+Write-Step "Backup"
 
 if (Test-Path $copilotHome) {
     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -696,18 +698,18 @@ if (Test-Path $copilotHome) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 2: Ensure directories exist
+# Setup · Directories
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 2 · Directories"
+Write-Step "Setup · Directories"
 
 Ensure-Directory $copilotHome
 Ensure-Directory $copilotSkillsHome
 Write-Success "~/.copilot/ and ~/.copilot/skills/ exist"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 3: Symlink config files
+# Setup · Config Symlinks
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 3 · Config Symlinks"
+Write-Step "Setup · Config Symlinks"
 
 foreach ($cfg in $configFileLinks) {
     $sourceFileName = if ($cfg.Target) { $cfg.Target } else { $cfg.Name }
@@ -745,9 +747,9 @@ foreach ($cfg in $configFileLinks) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 4: Patch config.json with portable settings
+# Setup · Patch config.json
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 4 · Patch config.json"
+Write-Step "Setup · Patch config.json"
 
 # Load or create config.json
 if (Test-Path $configJsonPath) {
@@ -779,9 +781,9 @@ if (Test-Path $portableJsonPath) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 5: Add repo path to trusted_folders
+# Setup · Trusted Folders
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 5 · Trusted Folders"
+Write-Step "Setup · Trusted Folders"
 
 $configJson = Get-Content $configJsonPath -Raw | ConvertFrom-Json
 $resolvedRepoRoot = [System.IO.Path]::GetFullPath($repoRoot)
@@ -812,9 +814,9 @@ if (-not $alreadyTrusted) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 6: Remove beads marketplace
+# Setup · Marketplace
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 6 · Clean Marketplace"
+Write-Step "Setup · Marketplace"
 
 $configJson = Get-Content $configJsonPath -Raw | ConvertFrom-Json
 
@@ -855,9 +857,9 @@ if ($configJson.PSObject.Properties["marketplaces"]) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 7: Symlink local custom skills
+# Skills · Link
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 7 · Skills"
+Write-Step "Skills · Link"
 
 $localSkills = Get-SkillFolders -BasePath $repoSkillsDir
 
@@ -891,11 +893,11 @@ if ($localSkills.Count -eq 0) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 7b: Clean up old anthropic/awesome-copilot skill junctions
+# Skills · Legacy Cleanup
 # ─────────────────────────────────────────────────────────────────────────────
 # These repos are now installed via Copilot CLI plugins, not manual cloning.
 # Remove any leftover junctions pointing into their old clone directories.
-Write-Step "Step 7b · Legacy Cleanup"
+Write-Step "Skills · Legacy Cleanup"
 
 $legacyPatterns = @("anthropic-skills", "awesome-copilot", "msx-mcp", "MSX-MCP", "SPT-IQ")
 $legacyCleaned = 0
@@ -947,9 +949,9 @@ if ($legacyCleaned -gt 0) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 7c: Install Copilot CLI plugins
+# Skills · Plugins
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 7c · Plugins"
+Write-Step "Skills · Plugins"
 
 # Determine which plugins to install based on flags
 $pluginsToInstall = $plugins | Where-Object { -not $_.Work -or $includeWork }
@@ -990,9 +992,9 @@ if ($pluginsToInstall.Count -eq 0) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 8: Clone/pull external skill repos and symlink
+# Skills · External Repos
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 8 · External Repos"
+Write-Step "Skills · External Repos"
 
 # Track all skills for conflict detection: name -> list of @{Source; Path}
 $allSkills = @{}
@@ -1190,9 +1192,9 @@ foreach ($skillName in ($externalToLink.Keys | Sort-Object)) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 9: Resolve & build local MCP servers
+# MCP · Build Servers
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 9 · MCP Servers (Build)"
+Write-Step "MCP · Build Servers"
 
 $mcpServers = (Get-Content $mcpServersJsonPath -Raw | ConvertFrom-Json).servers
 
@@ -1334,9 +1336,9 @@ if ($script:summary.McpServersBuilt.Count -eq 0 -and $script:summary.McpServersF
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 10: Validate MCP server environment variables
+# MCP · Environment
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 10 · MCP Environment"
+Write-Step "MCP · Environment"
 
 foreach ($server in $enabledServers) {
     if (-not $server.envVars) { continue }
@@ -1364,9 +1366,9 @@ foreach ($server in $enabledServers) {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 11: Generate ~/.copilot/mcp-config.json
+# MCP · Config
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 11 · MCP Config"
+Write-Step "MCP · Config"
 
 $mcpConfig = [ordered]@{ mcpServers = [ordered]@{} }
 
@@ -1422,13 +1424,13 @@ Write-Success "Generated $mcpConfigPath ($($enabledServers.Count) servers)"
 $script:summary.McpConfigGenerated = $true
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 11b: Generate lsp-config.json
+# LSP · Config
 # ─────────────────────────────────────────────────────────────────────────────
 
 $lspServersPath = Join-Path $repoRoot "lsp-servers.json"
 
 function Generate-LspConfig {
-    param([string]$Label = "Step 11b · LSP Config")
+    param([string]$Label = "LSP · Config")
     Write-Step $Label
 
     $lspConfig = [ordered]@{ lspServers = [ordered]@{} }
@@ -1492,9 +1494,9 @@ function Generate-LspConfig {
 Generate-LspConfig
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 12: Clean up stale skill junctions
+# Cleanup · Stale Symlinks
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 12 · Stale Symlinks"
+Write-Step "Cleanup · Stale Symlinks"
 
 # Build set of all skill names we intentionally linked (local + external)
 $linkedSkillNames = @{}
@@ -1890,7 +1892,7 @@ foreach ($item in $script:summary.OptionalInstalled) {
     if ($lspItems -contains $item) { $lspInstalledAny = $true; break }
 }
 if ($lspInstalledAny) {
-    Generate-LspConfig -Label "Step 11b · LSP Config (rebuild)"
+    Generate-LspConfig -Label "LSP · Config (rebuild)"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
