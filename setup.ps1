@@ -102,6 +102,7 @@ if ($CleanOrphans) {
 # =============================================================================
 $script:summary = [ordered]@{
     BackedUp          = $false
+    BackupDir         = ""
     ConfigFilesLinked = @()
     ConfigFilesSkipped = @()
     ConfigPatched     = $false
@@ -140,11 +141,33 @@ function Write-Color {
     Write-Host $Text -ForegroundColor $Color
 }
 
-function Write-Success { param([string]$Text) Write-Color "  ✓ $Text" "Green" }
-function Write-Info    { param([string]$Text) Write-Color "  ℹ $Text" "Cyan" }
-function Write-Warn    { param([string]$Text) Write-Color "  ⚠ $Text" "Yellow" }
-function Write-Err     { param([string]$Text) Write-Color "  ✗ $Text" "Red" }
-function Write-Step    { param([string]$Text) Write-Host ""; Write-Color "▸ $Text" "Cyan" }
+function Write-Success($msg) { Write-Host "  " -NoNewline; Write-Host "✓" -ForegroundColor Green -NoNewline; Write-Host " $msg" }
+function Write-Info($msg)    { Write-Host "  " -NoNewline; Write-Host "ℹ" -ForegroundColor Cyan -NoNewline; Write-Host " $msg" -ForegroundColor DarkGray }
+function Write-Warn($msg)    { Write-Host "  " -NoNewline; Write-Host "⚠" -ForegroundColor Yellow -NoNewline; Write-Host " $msg" }
+function Write-Err($msg)     { Write-Host "  " -NoNewline; Write-Host "✗" -ForegroundColor Red -NoNewline; Write-Host " $msg" }
+function Write-Step($msg)    { Write-Host ""; Write-Host "  $msg" -ForegroundColor Cyan }
+
+function Write-Header($text) {
+    $len = $text.Length
+    $pad = $len + 4
+    $line = "─" * $pad
+    Write-Host ""
+    Write-Host "  ╭${line}╮" -ForegroundColor Cyan
+    Write-Host "  │  " -ForegroundColor Cyan -NoNewline; Write-Host "$text" -NoNewline; Write-Host "  │" -ForegroundColor Cyan
+    Write-Host "  ╰${line}╯" -ForegroundColor Cyan
+}
+
+function Write-Section($text) {
+    $width = 40
+    $textLen = $text.Length
+    $leftPad = [math]::Floor(($width - $textLen - 2) / 2)
+    $rightPad = $width - $textLen - 2 - $leftPad
+    $left = "─" * $leftPad
+    $right = "─" * $rightPad
+    Write-Host ""
+    Write-Host "  ${left} " -ForegroundColor Cyan -NoNewline; Write-Host "$text" -NoNewline; Write-Host " ${right}" -ForegroundColor Cyan
+    Write-Host ""
+}
 
 function Ensure-Directory {
     param([string]$Path)
@@ -576,15 +599,13 @@ function Get-SkillFolders {
 # Main Script
 # =============================================================================
 
-Write-Host ""
-Write-Color "📦 Copilot Config & Skills Setup" "Cyan"
-Write-Color "=================================" "Cyan"
+Write-Header "📦  Copilot Config & Skills Setup"
 Write-Host ""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Preflight: Git authentication
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Preflight: Git authentication"
+Write-Step "Preflight · Git Authentication"
 
 # Check for GitHub CLI
 if (Get-Command gh -ErrorAction SilentlyContinue) {
@@ -625,7 +646,7 @@ if ($sshResult -match "Hi .+!") {
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 1: Backup ~/.copilot/
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 1: Backup existing ~/.copilot/"
+Write-Step "Step 1 · Backup"
 
 if (Test-Path $copilotHome) {
     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -660,6 +681,7 @@ if (Test-Path $copilotHome) {
 
     Write-Success "Backed up to $backupDir"
     $script:summary.BackedUp = $true
+    $script:summary.BackupDir = $backupDir
 
     # Clean up old backups — keep only the 5 most recent
     $oldBackups = @(Get-ChildItem -Path $env:USERPROFILE -Directory -Filter ".copilot-backup-*" |
@@ -676,7 +698,7 @@ if (Test-Path $copilotHome) {
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 2: Ensure directories exist
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 2: Ensure directories"
+Write-Step "Step 2 · Directories"
 
 Ensure-Directory $copilotHome
 Ensure-Directory $copilotSkillsHome
@@ -685,7 +707,7 @@ Write-Success "~/.copilot/ and ~/.copilot/skills/ exist"
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 3: Symlink config files
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 3: Symlink config files"
+Write-Step "Step 3 · Config Symlinks"
 
 foreach ($cfg in $configFileLinks) {
     $sourceFileName = if ($cfg.Target) { $cfg.Target } else { $cfg.Name }
@@ -725,7 +747,7 @@ foreach ($cfg in $configFileLinks) {
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 4: Patch config.json with portable settings
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 4: Patch config.json"
+Write-Step "Step 4 · Patch config.json"
 
 # Load or create config.json
 if (Test-Path $configJsonPath) {
@@ -759,7 +781,7 @@ if (Test-Path $portableJsonPath) {
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 5: Add repo path to trusted_folders
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 5: Trusted folders"
+Write-Step "Step 5 · Trusted Folders"
 
 $configJson = Get-Content $configJsonPath -Raw | ConvertFrom-Json
 $resolvedRepoRoot = [System.IO.Path]::GetFullPath($repoRoot)
@@ -792,7 +814,7 @@ if (-not $alreadyTrusted) {
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 6: Remove beads marketplace
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 6: Remove beads marketplace"
+Write-Step "Step 6 · Clean Marketplace"
 
 $configJson = Get-Content $configJsonPath -Raw | ConvertFrom-Json
 
@@ -835,7 +857,7 @@ if ($configJson.PSObject.Properties["marketplaces"]) {
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 7: Symlink local custom skills
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 7: Symlink local custom skills"
+Write-Step "Step 7 · Skills"
 
 $localSkills = Get-SkillFolders -BasePath $repoSkillsDir
 
@@ -873,7 +895,7 @@ if ($localSkills.Count -eq 0) {
 # ─────────────────────────────────────────────────────────────────────────────
 # These repos are now installed via Copilot CLI plugins, not manual cloning.
 # Remove any leftover junctions pointing into their old clone directories.
-Write-Step "Step 7b: Clean up legacy skill junctions (anthropic, awesome-copilot, msx-mcp, SPT-IQ)"
+Write-Step "Step 7b · Legacy Cleanup"
 
 $legacyPatterns = @("anthropic-skills", "awesome-copilot", "msx-mcp", "MSX-MCP", "SPT-IQ")
 $legacyCleaned = 0
@@ -927,7 +949,7 @@ if ($legacyCleaned -gt 0) {
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 7c: Install Copilot CLI plugins
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 7c: Install plugins"
+Write-Step "Step 7c · Plugins"
 
 # Determine which plugins to install based on flags
 $pluginsToInstall = $plugins | Where-Object { -not $_.Work -or $includeWork }
@@ -970,7 +992,7 @@ if ($pluginsToInstall.Count -eq 0) {
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 8: Clone/pull external skill repos and symlink
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 8: External skill repositories"
+Write-Step "Step 8 · External Repos"
 
 # Track all skills for conflict detection: name -> list of @{Source; Path}
 $allSkills = @{}
@@ -1170,7 +1192,7 @@ foreach ($skillName in ($externalToLink.Keys | Sort-Object)) {
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 9: Resolve & build local MCP servers
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 9: Resolve & build local MCP servers"
+Write-Step "Step 9 · MCP Servers (Build)"
 
 $mcpServers = (Get-Content $mcpServersJsonPath -Raw | ConvertFrom-Json).servers
 
@@ -1314,7 +1336,7 @@ if ($script:summary.McpServersBuilt.Count -eq 0 -and $script:summary.McpServersF
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 10: Validate MCP server environment variables
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 10: Validate MCP environment variables"
+Write-Step "Step 10 · MCP Environment"
 
 foreach ($server in $enabledServers) {
     if (-not $server.envVars) { continue }
@@ -1344,7 +1366,7 @@ foreach ($server in $enabledServers) {
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 11: Generate ~/.copilot/mcp-config.json
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 11: Generate mcp-config.json"
+Write-Step "Step 11 · MCP Config"
 
 $mcpConfig = [ordered]@{ mcpServers = [ordered]@{} }
 
@@ -1406,7 +1428,7 @@ $script:summary.McpConfigGenerated = $true
 $lspServersPath = Join-Path $repoRoot "lsp-servers.json"
 
 function Generate-LspConfig {
-    param([string]$Label = "Step 11b: Generate lsp-config.json")
+    param([string]$Label = "Step 11b · LSP Config")
     Write-Step $Label
 
     $lspConfig = [ordered]@{ lspServers = [ordered]@{} }
@@ -1472,7 +1494,7 @@ Generate-LspConfig
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 12: Clean up stale skill junctions
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Step "Step 12: Clean up stale skill junctions"
+Write-Step "Step 12 · Stale Symlinks"
 
 # Build set of all skill names we intentionally linked (local + external)
 $linkedSkillNames = @{}
@@ -1540,14 +1562,10 @@ if ($totalCleaned -eq 0) {
 # Step 12b: Optional Dependencies
 # ─────────────────────────────────────────────────────────────────────────────
 if (-not $NonInteractive) {
-    Write-Host ""
-    Write-Color "═══════════════════════════════════" "Cyan"
-    Write-Color "  Optional Dependencies" "Cyan"
-    Write-Color "═══════════════════════════════════" "Cyan"
-    Write-Host ""
-    Write-Host "These tools enhance specific skills. You can install them now"
-    Write-Host "or later. The agent works without them but some skills will"
-    Write-Host "be limited."
+    Write-Section "Optional Dependencies"
+    Write-Host "  These tools enhance specific skills. You can install them now" -ForegroundColor DarkGray
+    Write-Host "  or later. The agent works without them but some skills will" -ForegroundColor DarkGray
+    Write-Host "  be limited." -ForegroundColor DarkGray
     Write-Host ""
 
     # --- LSP Server Binaries ---
@@ -1842,8 +1860,8 @@ if (-not $NonInteractive) {
         Write-Host "  screenshots, click buttons, fill forms, and verify web apps."
         Write-Host "  The Edge driver is used for browser automation."
         Write-Host ""
-        $answer = Read-Host "  Install Playwright Edge driver? [Y/n]"
-        if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
+        $answer = Read-Host "  Install Playwright Edge driver? [y/N]"
+        if ($answer -eq "y" -or $answer -eq "Y") {
             try {
                 Write-Info "Installing Playwright Edge driver..."
                 npx playwright install msedge
@@ -1872,38 +1890,35 @@ foreach ($item in $script:summary.OptionalInstalled) {
     if ($lspItems -contains $item) { $lspInstalledAny = $true; break }
 }
 if ($lspInstalledAny) {
-    Generate-LspConfig -Label "Regenerate lsp-config.json (new servers installed)"
+    Generate-LspConfig -Label "Step 11b · LSP Config (rebuild)"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 13: Summary
 # ─────────────────────────────────────────────────────────────────────────────
-Write-Host ""
-Write-Color "═══════════════════════════════════" "Cyan"
-Write-Color "  ✨ Setup Complete" "Green"
-Write-Color "═══════════════════════════════════" "Cyan"
+Write-Header "✨  Setup Complete"
 Write-Host ""
 
 if ($script:summary.BackedUp) {
-    Write-Color "  Backup:           ~/.copilot-backup-$timestamp/" "White"
+    Write-Host "  " -NoNewline; Write-Host "Backup" -ForegroundColor DarkGray -NoNewline; Write-Host "           $($script:summary.BackupDir)"
 }
 
 $linkedCount = $script:summary.ConfigFilesLinked.Count
 $skippedCfg  = $script:summary.ConfigFilesSkipped.Count
 if ($linkedCount -gt 0 -or $skippedCfg -gt 0) {
-    Write-Color "  Config symlinks:  $linkedCount linked, $skippedCfg skipped" "White"
+    Write-Host "  " -NoNewline; Write-Host "Config" -ForegroundColor DarkGray -NoNewline; Write-Host "           $linkedCount linked, $skippedCfg skipped"
 }
 
 if ($script:summary.ConfigPatched) {
-    Write-Color "  Config patched:   $($portableAllowedKeys -join ', ')" "White"
+    Write-Host "  " -NoNewline; Write-Host "Patched" -ForegroundColor DarkGray -NoNewline; Write-Host "          $($portableAllowedKeys -join ', ')"
 }
 
 if ($script:summary.TrustedFolderAdded) {
-    Write-Color "  Trusted folder:   $resolvedRepoRoot (added)" "White"
+    Write-Host "  " -NoNewline; Write-Host "Trusted" -ForegroundColor DarkGray -NoNewline; Write-Host "          $resolvedRepoRoot"
 }
 
 if ($script:summary.BeadsRemoved) {
-    Write-Color "  Marketplace:      beads-marketplace removed" "White"
+    Write-Host "  " -NoNewline; Write-Host "Marketplace" -ForegroundColor DarkGray -NoNewline; Write-Host "      beads-marketplace removed"
 }
 
 $createdCount = $script:summary.SkillsCreated.Count
@@ -1912,13 +1927,13 @@ $skippedCount = $script:summary.SkillsSkipped.Count
 $failedCount  = $script:summary.SkillsFailed.Count
 
 Write-Host ""
-Write-Color "  Skills (no allowlist — all linked):" "Cyan"
-if ($createdCount -gt 0) { Write-Color "    Created:        $createdCount" "Green" }
-if ($existedCount -gt 0) { Write-Color "    Already linked: $existedCount" "Cyan" }
-if ($skippedCount -gt 0) { Write-Color "    Skipped:        $skippedCount" "Yellow" }
-if ($failedCount  -gt 0) { Write-Color "    Failed:         $failedCount" "Red" }
+Write-Host "  Skills"
+if ($createdCount -gt 0) { Write-Host "    " -NoNewline; Write-Host "✓" -ForegroundColor Green -NoNewline; Write-Host " Created         $createdCount" }
+if ($existedCount -gt 0) { Write-Host "    " -NoNewline; Write-Host "✓" -ForegroundColor DarkGray -NoNewline; Write-Host " Already linked  $existedCount" -ForegroundColor DarkGray }
+if ($skippedCount -gt 0) { Write-Host "    " -NoNewline; Write-Host "⚠" -ForegroundColor Yellow -NoNewline; Write-Host " Skipped         $skippedCount" }
+if ($failedCount  -gt 0) { Write-Host "    " -NoNewline; Write-Host "✗" -ForegroundColor Red -NoNewline; Write-Host " Failed          $failedCount" }
 if ($createdCount -eq 0 -and $existedCount -eq 0 -and $skippedCount -eq 0 -and $failedCount -eq 0) {
-    Write-Color "    (none)" "Gray"
+    Write-Host "    " -NoNewline; Write-Host "─" -ForegroundColor DarkGray -NoNewline; Write-Host " (none)" -ForegroundColor DarkGray
 }
 
 $extCloned = $script:summary.ExternalCloned.Count
@@ -1926,49 +1941,50 @@ $extPulled = $script:summary.ExternalPulled.Count
 $extFailed = $script:summary.ExternalFailed.Count
 if ($extCloned -gt 0 -or $extPulled -gt 0 -or $extFailed -gt 0) {
     Write-Host ""
-    Write-Color "  External repos:" "Cyan"
-    if ($extCloned -gt 0) { Write-Color "    Cloned:         $extCloned" "Green" }
-    if ($extPulled -gt 0) { Write-Color "    Updated:        $extPulled" "Cyan" }
-    if ($extFailed -gt 0) { Write-Color "    Failed:         $extFailed" "Red" }
+    Write-Host "  External Repos"
+    if ($extCloned -gt 0) { Write-Host "    " -NoNewline; Write-Host "✓" -ForegroundColor Green -NoNewline; Write-Host " Cloned          $extCloned" }
+    if ($extPulled -gt 0) { Write-Host "    " -NoNewline; Write-Host "✓" -ForegroundColor DarkGray -NoNewline; Write-Host " Updated         $extPulled" -ForegroundColor DarkGray }
+    if ($extFailed -gt 0) { Write-Host "    " -NoNewline; Write-Host "✗" -ForegroundColor Red -NoNewline; Write-Host " Failed          $extFailed" }
 }
 
 if ($script:summary.ConflictsResolved.Count -gt 0) {
     Write-Host ""
-    Write-Color "  Conflicts resolved:" "Yellow"
+    Write-Host "  Conflicts Resolved"
     foreach ($c in $script:summary.ConflictsResolved) {
-        Write-Color "    • $c" "Yellow"
+        Write-Host "    " -NoNewline; Write-Host "⚠" -ForegroundColor Yellow -NoNewline; Write-Host " $c"
     }
 }
 
 if ($script:summary.McpConfigGenerated) {
     Write-Host ""
-    Write-Color "  MCP servers:" "Cyan"
-    Write-Color "    Configured:     $($enabledServers.Count)" "Green"
+    Write-Host "  MCP Servers"
+    $enabledCount = $enabledServers.Count
+    Write-Host "    " -NoNewline; Write-Host "✓" -ForegroundColor Green -NoNewline; Write-Host " Configured      $enabledCount"
     if ($script:summary.McpServersBuilt.Count -gt 0) {
-        Write-Color "    Built:          $($script:summary.McpServersBuilt -join ', ')" "Green"
+        Write-Host "    " -NoNewline; Write-Host "✓" -ForegroundColor Green -NoNewline; Write-Host " Built           $($script:summary.McpServersBuilt -join ', ')"
     }
     if ($script:summary.McpServersFailed.Count -gt 0) {
-        Write-Color "    Build failed:   $($script:summary.McpServersFailed -join ', ')" "Red"
+        Write-Host "    " -NoNewline; Write-Host "✗" -ForegroundColor Red -NoNewline; Write-Host " Build failed    $($script:summary.McpServersFailed -join ', ')"
     }
     if ($script:summary.McpEnvMissing.Count -gt 0) {
-        Write-Color "    Env missing:    $($script:summary.McpEnvMissing -join ', ')" "Yellow"
+        Write-Host "    " -NoNewline; Write-Host "⚠" -ForegroundColor Yellow -NoNewline; Write-Host " Env missing     $($script:summary.McpEnvMissing -join ', ')"
     }
 }
 
 # LSP servers
 if ($script:summary.LspConfigGenerated) {
     Write-Host ""
-    Write-Color "  LSP servers:" "Cyan"
-    Write-Color "    Configured:     $($script:summary.LspCount)" "Green"
+    Write-Host "  LSP Servers"
+    Write-Host "    " -NoNewline; Write-Host "✓" -ForegroundColor Green -NoNewline; Write-Host " Configured      $($script:summary.LspCount)"
     if ($script:summary.LspSkipped.Count -gt 0) {
-        Write-Color "    Skipped:        $($script:summary.LspSkipped -join ', ') (not installed)" "Yellow"
+        Write-Host "    " -NoNewline; Write-Host "─" -ForegroundColor DarkGray -NoNewline; Write-Host " Not installed   $($script:summary.LspSkipped -join ', ')" -ForegroundColor DarkGray
     }
 }
 
 if ($script:summary.PluginJunctionsCleaned -gt 0) {
     Write-Host ""
-    Write-Color "  Legacy cleanup:" "Cyan"
-    Write-Color "    Junctions removed: $($script:summary.PluginJunctionsCleaned) (now use plugins)" "Yellow"
+    Write-Host "  Legacy Cleanup"
+    Write-Host "    " -NoNewline; Write-Host "✓" -ForegroundColor Green -NoNewline; Write-Host " Junctions       $($script:summary.PluginJunctionsCleaned) removed (now use plugins)"
 }
 
 $pInstalled = $script:summary.PluginsInstalled.Count
@@ -1976,10 +1992,10 @@ $pSkipped   = $script:summary.PluginsSkipped.Count
 $pFailed    = $script:summary.PluginsFailed.Count
 if ($pInstalled -gt 0 -or $pSkipped -gt 0 -or $pFailed -gt 0) {
     Write-Host ""
-    Write-Color "  Plugins:" "Cyan"
-    if ($pInstalled -gt 0) { Write-Color "    Installed:      $($script:summary.PluginsInstalled -join ', ')" "Green" }
-    if ($pSkipped   -gt 0) { Write-Color "    Already there:  $($script:summary.PluginsSkipped -join ', ')" "Cyan" }
-    if ($pFailed    -gt 0) { Write-Color "    Failed:         $($script:summary.PluginsFailed -join ', ')" "Red" }
+    Write-Host "  Plugins"
+    if ($pInstalled -gt 0) { Write-Host "    " -NoNewline; Write-Host "✓" -ForegroundColor Green -NoNewline; Write-Host " Installed       $($script:summary.PluginsInstalled -join ', ')" }
+    if ($pSkipped   -gt 0) { Write-Host "    " -NoNewline; Write-Host "✓" -ForegroundColor DarkGray -NoNewline; Write-Host " Already there   $($script:summary.PluginsSkipped -join ', ')" -ForegroundColor DarkGray }
+    if ($pFailed    -gt 0) { Write-Host "    " -NoNewline; Write-Host "✗" -ForegroundColor Red -NoNewline; Write-Host " Failed          $($script:summary.PluginsFailed -join ', ')" }
 }
 
 $oInstalled = $script:summary.OptionalInstalled.Count
@@ -1987,10 +2003,10 @@ $oSkipped   = $script:summary.OptionalSkipped.Count
 $oFailed    = $script:summary.OptionalFailed.Count
 if ($oInstalled -gt 0 -or $oSkipped -gt 0 -or $oFailed -gt 0) {
     Write-Host ""
-    Write-Color "  Optional tools:" "Cyan"
-    if ($oInstalled -gt 0) { Write-Color "    Installed:      $($script:summary.OptionalInstalled -join ', ')" "Green" }
-    if ($oSkipped   -gt 0) { Write-Color "    Skipped:        $($script:summary.OptionalSkipped -join ', ')" "Cyan" }
-    if ($oFailed    -gt 0) { Write-Color "    Failed:         $($script:summary.OptionalFailed -join ', ')" "Red" }
+    Write-Host "  Optional Tools"
+    if ($oInstalled -gt 0) { Write-Host "    " -NoNewline; Write-Host "✓" -ForegroundColor Green -NoNewline; Write-Host " Installed       $($script:summary.OptionalInstalled -join ', ')" }
+    if ($oSkipped   -gt 0) { Write-Host "    " -NoNewline; Write-Host "─" -ForegroundColor DarkGray -NoNewline; Write-Host " Skipped         $($script:summary.OptionalSkipped -join ', ')" -ForegroundColor DarkGray }
+    if ($oFailed    -gt 0) { Write-Host "    " -NoNewline; Write-Host "✗" -ForegroundColor Red -NoNewline; Write-Host " Failed          $($script:summary.OptionalFailed -join ', ')" }
 }
 
 Write-Host ""
