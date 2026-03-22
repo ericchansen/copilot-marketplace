@@ -166,7 +166,9 @@ ensure_dir() {
 }
 
 # Validate that an LSP server binary exists and can actually execute.
-# Returns 0 if the server responds to an LSP initialize request, 1 otherwise.
+# Starts the binary and checks it doesn't crash immediately. A working server
+# will stay running (killed by timeout → exit 124), while a broken one (wrong
+# platform, missing runtime) crashes with a non-zero/non-124 exit code.
 # Usage: validate_lsp_binary <command> [args...]
 validate_lsp_binary() {
     local cmd="$1"
@@ -178,9 +180,24 @@ validate_lsp_binary() {
         return 1
     fi
 
-    # Must actually execute and respond to LSP initialize
-    local init_msg='Content-Length: 108\r\n\r\n{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"processId":null,"rootUri":null,"capabilities":{}}}'
-    if echo -e "$init_msg" | timeout 5 "$cmd" "${args[@]}" >/dev/null 2>&1; then
+    # Prefer GNU coreutils timeout; fall back to gtimeout (Homebrew on macOS)
+    local timeout_bin=""
+    if command -v timeout &>/dev/null; then
+        timeout_bin="timeout"
+    elif command -v gtimeout &>/dev/null; then
+        timeout_bin="gtimeout"
+    else
+        # No timeout available; binary exists on PATH, assume functional
+        return 0
+    fi
+
+    # Start the binary briefly — a functional server stays alive (timeout kills
+    # it, exit 124) or exits cleanly (exit 0). A broken binary crashes immediately.
+    local exit_code
+    "$timeout_bin" 2 "$cmd" "${args[@]}" </dev/null >/dev/null 2>&1
+    exit_code=$?
+
+    if [[ $exit_code -eq 0 || $exit_code -eq 124 ]]; then
         return 0
     else
         return 1
@@ -1310,10 +1327,12 @@ if [[ -f "$LSP_SERVERS_JSON" ]]; then
         cmd=$(echo "$server_json" | jq -r '.command')
         args_json=$(echo "$server_json" | jq -r '.args // [] | .[]')
         
-        # Convert args JSON array to bash array
-        readarray -t cmd_args <<< "$args_json"
-        # Filter empty entries
-        cmd_args=("${cmd_args[@]}")
+        # Convert args JSON array to bash array, avoiding a spurious
+        # empty-string element when there are no args (e.g., rust-analyzer).
+        cmd_args=()
+        if [[ -n "$args_json" ]]; then
+            readarray -t cmd_args <<< "$args_json"
+        fi
         
         if validate_lsp_binary "$cmd" "${cmd_args[@]}"; then
             LSP_CONFIG=$(echo "$LSP_CONFIG" | jq --arg name "$server_name" --argjson entry "$server_json" \

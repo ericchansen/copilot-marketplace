@@ -180,29 +180,39 @@ function Validate-LspBinary {
     $binary = Get-Command $Command -ErrorAction SilentlyContinue
     if (-not $binary) { return $false }
     
-    # Verify the binary actually executes (catches WSL finding Windows binaries that can't run)
+    # Start the binary briefly — a functional server stays alive or exits cleanly;
+    # a broken one crashes immediately with a non-zero exit code.
     try {
-        $initMsg = "Content-Length: 108`r`n`r`n{`"jsonrpc`":`"2.0`",`"id`":1,`"method`":`"initialize`",`"params`":{`"processId`":null,`"rootUri`":null,`"capabilities`":{}}}"
         $psi = New-Object System.Diagnostics.ProcessStartInfo
-        $psi.FileName = $binary.Source
-        $psi.Arguments = ($Arguments -join " ")
         $psi.RedirectStandardInput = $true
         $psi.RedirectStandardOutput = $true
         $psi.RedirectStandardError = $true
         $psi.UseShellExecute = $false
         $psi.CreateNoWindow = $true
-        
-        $proc = [System.Diagnostics.Process]::Start($psi)
-        $proc.StandardInput.Write($initMsg)
-        $proc.StandardInput.Close()
-        $proc.WaitForExit(5000) | Out-Null
-        
-        if (-not $proc.HasExited) {
-            $proc.Kill()
+
+        # npm-installed binaries are .cmd shims — Process.Start() can't run them
+        # directly with UseShellExecute=false, so invoke via cmd.exe /c.
+        $source = $binary.Source
+        if ($source -match '\.(cmd|bat)$') {
+            $psi.FileName = "cmd.exe"
+            $psi.Arguments = "/c `"$source`" $($Arguments -join ' ')"
+        } else {
+            $psi.FileName = $source
+            $psi.Arguments = ($Arguments -join " ")
         }
         
-        # If process ran without crashing immediately, it's functional
-        return ($proc.ExitCode -ne 127 -and $proc.ExitCode -ne 1)
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        $proc.StandardInput.Close()
+        $exited = $proc.WaitForExit(2000)
+        
+        if (-not $exited) {
+            # Still running after 2s — binary is functional
+            $proc.Kill()
+            return $true
+        }
+        
+        # Exited within 2s — check if it was a clean exit or a crash
+        return ($proc.ExitCode -eq 0)
     } catch {
         return $false
     }
