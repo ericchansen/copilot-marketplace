@@ -1450,7 +1450,7 @@ function Generate-LspConfig {
             if (Validate-LspBinary -Command $cmd -Arguments $args) {
                 $entry = [ordered]@{}
                 $entry["command"] = $serverDef.command
-                $entry["args"] = @($serverDef.args)
+                $entry["args"] = $args
                 $entry["fileExtensions"] = [ordered]@{}
                 foreach ($ext in $serverDef.fileExtensions.PSObject.Properties) {
                     $entry["fileExtensions"][$ext.Name] = $ext.Value
@@ -1766,7 +1766,12 @@ if (-not $NonInteractive) {
                         python -m pipx install 'markitdown[all]'
                     }
                     if ($LASTEXITCODE -eq 0) {
-                        Write-Success "MarkItDown installed"
+                        if (-not (Get-Command markitdown -ErrorAction SilentlyContinue)) {
+                            Write-Warn "MarkItDown installed but not on PATH yet"
+                            Write-Info "Run: python -m pipx ensurepath   (then restart your shell)"
+                        } else {
+                            Write-Success "MarkItDown installed"
+                        }
                         $script:summary.OptionalInstalled += "markitdown"
                     } else {
                         Write-Err "MarkItDown install failed"
