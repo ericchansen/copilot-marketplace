@@ -1552,6 +1552,34 @@ if (-not $NonInteractive) {
     # same intelligence your IDE uses. Without them the agent still works, but
     # relies on text-based search instead.
 
+    # Determine if npm global install needs elevated privileges
+    $npmNeedsAdmin = $false
+    if (Get-Command npm -ErrorAction SilentlyContinue) {
+        $npmPrefix = (npm config get prefix 2>$null)
+        if ($npmPrefix -and (Test-Path $npmPrefix)) {
+            try {
+                $testFile = Join-Path $npmPrefix ".copilot-write-test"
+                [IO.File]::WriteAllText($testFile, "")
+                Remove-Item $testFile -Force
+            } catch {
+                $npmNeedsAdmin = $true
+            }
+        }
+    }
+    function Npm-InstallGlobal {
+        param([string[]]$Packages)
+        if ($npmNeedsAdmin) {
+            $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+            if (-not $isAdmin) {
+                Write-Warn "Node is installed system-wide — global npm installs need Administrator"
+                Write-Info "Re-run this script as Administrator, or use nvm-windows for user-scoped Node."
+                return $false
+            }
+        }
+        npm install -g @Packages
+        return ($LASTEXITCODE -eq 0)
+    }
+
     # TypeScript Language Server (npm)
     if (Validate-LspBinary -Command "typescript-language-server" -Arguments @("--stdio")) {
         Write-Success "typescript-language-server already installed"
@@ -1568,8 +1596,7 @@ if (-not $NonInteractive) {
         if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
             try {
                 Write-Info "Installing typescript-language-server and typescript via npm..."
-                npm install -g typescript-language-server typescript
-                if ($LASTEXITCODE -eq 0) {
+                if (Npm-InstallGlobal -Packages @("typescript-language-server", "typescript")) {
                     Write-Success "typescript-language-server installed"
                     $script:summary.OptionalInstalled += "typescript-language-server"
                 } else {
@@ -1602,8 +1629,7 @@ if (-not $NonInteractive) {
         if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
             try {
                 Write-Info "Installing pyright via npm..."
-                npm install -g pyright
-                if ($LASTEXITCODE -eq 0) {
+                if (Npm-InstallGlobal -Packages @("pyright")) {
                     Write-Success "pyright-langserver installed"
                     $script:summary.OptionalInstalled += "pyright-langserver"
                 } else {
@@ -1669,18 +1695,42 @@ if (-not $NonInteractive) {
         Write-Host ""
         $answer = Read-Host "  Install MarkItDown? [Y/n]"
         if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
-            # Ensure pipx is available
-            if (-not (Get-Command pipx -ErrorAction SilentlyContinue)) {
-                if (Get-Command pip -ErrorAction SilentlyContinue) {
-                    Write-Info "Installing pipx (required for Python app installs)..."
-                    pip install --user pipx 2>&1 | Out-Null
+            # Check for pipx — prefer it over raw pip for isolated installs
+            $pipxCmd = $null
+            if (Get-Command pipx -ErrorAction SilentlyContinue) {
+                $pipxCmd = "pipx"
+            } elseif (Get-Command pip -ErrorAction SilentlyContinue) {
+                # Try installing pipx; on Windows, pip --user puts it in a
+                # directory that may not be on PATH yet, so we invoke via
+                # python -m pipx instead.
+                Write-Host ""
+                Write-Info "MarkItDown is a Python app. 'pipx' installs Python apps in"
+                Write-Info "isolated environments so they don't interfere with your system Python."
+                Write-Host ""
+                $pipxAnswer = Read-Host "  Install pipx? (pip install --user pipx) [Y/n]"
+                if ($pipxAnswer -eq "" -or $pipxAnswer -eq "y" -or $pipxAnswer -eq "Y") {
+                    Write-Info "Installing pipx..."
+                    pip install --user pipx
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Success "pipx installed"
+                        # Use python -m pipx since the binary may not be on PATH yet
+                        $pipxCmd = "python -m pipx"
+                    } else {
+                        Write-Err "pipx install failed"
+                    }
+                } else {
+                    Write-Info "Skipped pipx — will try pip directly"
                 }
             }
 
-            if (Get-Command pipx -ErrorAction SilentlyContinue) {
+            if ($pipxCmd) {
                 try {
                     Write-Info "Installing markitdown[all] via pipx..."
-                    pipx install 'markitdown[all]'
+                    if ($pipxCmd -eq "pipx") {
+                        pipx install 'markitdown[all]'
+                    } else {
+                        python -m pipx install 'markitdown[all]'
+                    }
                     if ($LASTEXITCODE -eq 0) {
                         Write-Success "MarkItDown installed"
                         $script:summary.OptionalInstalled += "markitdown"
@@ -1744,8 +1794,7 @@ if (-not $NonInteractive) {
             if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
                 try {
                     Write-Info "Installing @tobilu/qmd via npm..."
-                    npm install -g "@tobilu/qmd"
-                    if ($LASTEXITCODE -eq 0) {
+                    if (Npm-InstallGlobal -Packages @("@tobilu/qmd")) {
                         Write-Success "QMD installed"
                         $script:summary.OptionalInstalled += "qmd"
                     } else {
