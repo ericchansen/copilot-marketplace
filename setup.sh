@@ -609,6 +609,12 @@ jq_inplace() {
 }
 
 # =============================================================================
+# Main Script
+# =============================================================================
+
+draw_header "📦  Copilot Config & Skills Setup" 1
+
+# =============================================================================
 # Interactive option prompts
 # =============================================================================
 
@@ -616,6 +622,7 @@ INCLUDE_WORK=false
 if $WORK; then
     INCLUDE_WORK=true
 elif ! $NON_INTERACTIVE; then
+    echo ""
     read -rp "  Include work tools? (MSX-MCP plugin + Power BI MCP) [y/N] " answer
     [[ "${answer,,}" == "y" ]] && INCLUDE_WORK=true
 fi
@@ -630,13 +637,6 @@ fi
 
 # No external repos to merge — all skills are installed via plugins
 REPOS_JSON="$EXTERNAL_REPOS_JSON"
-
-# =============================================================================
-# Main Script
-# =============================================================================
-
-draw_header "📦  Copilot Config & Skills Setup" 1
-echo ""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Preflight: Git authentication
@@ -674,9 +674,9 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 1: Backup ~/.copilot/
+# Backup
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 1 · Backup"
+write_step "Backup"
 
 BACKUP_TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
 
@@ -728,18 +728,18 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 2: Ensure directories exist
+# Setup: Directories
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 2 · Directories"
+write_step "Setup · Directories"
 
 ensure_dir "$COPILOT_HOME"
 ensure_dir "$COPILOT_SKILLS_HOME"
 write_success "~/.copilot/ and ~/.copilot/skills/ exist"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 3: Symlink config files
+# Setup: Config Symlinks
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 3 · Config Symlinks"
+write_step "Setup · Config Symlinks"
 
 for cfg_name in "${CONFIG_FILE_LINKS[@]}"; do
     target_path="$REPO_COPILOT_DIR/$cfg_name"
@@ -770,9 +770,9 @@ for cfg_name in "${CONFIG_FILE_LINKS[@]}"; do
 done
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 4: Patch config.json with portable settings
+# Setup: Patch config.json
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 4 · Patch config.json"
+write_step "Setup · Patch config.json"
 
 # Create config.json if it doesn't exist
 if [[ ! -f "$CONFIG_JSON" ]]; then
@@ -793,9 +793,9 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 5: Add repo path to trusted_folders
+# Setup: Trusted Folders
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 5 · Trusted Folders"
+write_step "Setup · Trusted Folders"
 
 RESOLVED_REPO_ROOT=$(resolve_path "$REPO_ROOT")
 
@@ -808,9 +808,9 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 6: Remove beads marketplace
+# Setup: Marketplace
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 6 · Clean Marketplace"
+write_step "Setup · Marketplace"
 
 if jq -e '.marketplaces' "$CONFIG_JSON" &>/dev/null; then
     # Handle object with named keys
@@ -837,9 +837,9 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 7: Symlink local custom skills
+# Skills: Link
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 7 · Skills"
+write_step "Skills · Link"
 
 # Collect local skills
 declare -A LOCAL_SKILL_PATHS=()
@@ -876,10 +876,10 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 7b: Clean up old anthropic/awesome-copilot skill junctions
+# Skills: Legacy Cleanup
 # ─────────────────────────────────────────────────────────────────────────────
 # These repos are now installed via Copilot CLI plugins, not manual cloning.
-write_step "Step 7b · Legacy Cleanup"
+write_step "Skills · Legacy Cleanup"
 
 legacy_cleaned=0
 
@@ -923,9 +923,9 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 7c: Install Copilot CLI plugins
+# Skills: Plugins
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 7c · Plugins"
+write_step "Skills · Plugins"
 
 # Filter plugins based on flags
 if $INCLUDE_WORK; then
@@ -966,9 +966,9 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 8: Clone/pull external skill repos and symlink
+# Skills: External Repos
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 8 · External Repos"
+write_step "Skills · External Repos"
 
 # Track all skills: linked_skills[name] = source, skill_paths[name] = path
 declare -A LINKED_SKILLS=()
@@ -1129,9 +1129,9 @@ for skill_name in $(echo "${!LINKED_SKILLS[@]}" | tr ' ' '\n' | sort); do
 done
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 9: Resolve & build local MCP servers
+# MCP: Build Servers
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 9 · MCP Servers (Build)"
+write_step "MCP · Build Servers"
 
 # Determine enabled categories
 ENABLED_CATEGORIES='["base"]'
@@ -1261,9 +1261,9 @@ if [[ ${#SUMMARY_MCP_BUILT[@]} -eq 0 && ${#SUMMARY_MCP_FAILED[@]} -eq 0 && "$loc
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 10: Validate MCP server environment variables
+# MCP: Environment
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 10 · MCP Environment"
+write_step "MCP · Environment"
 
 while IFS= read -r server_json; do
     server_name=$(echo "$server_json" | jq -r '.name')
@@ -1293,9 +1293,9 @@ while IFS= read -r server_json; do
 done < <(echo "$ENABLED_SERVERS" | jq -c '.[]')
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 11: Generate ~/.copilot/mcp-config.json
+# MCP: Config
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 11 · MCP Config"
+write_step "MCP · Config"
 
 MCP_CONFIG='{"mcpServers":{}}'
 
@@ -1352,13 +1352,13 @@ write_success "Generated $MCP_CONFIG_PATH ($ENABLED_COUNT servers)"
 SUMMARY_MCP_GENERATED=true
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 11b: Generate lsp-config.json
+# LSP: Config
 # ─────────────────────────────────────────────────────────────────────────────
 
 LSP_SERVERS_JSON="$REPO_ROOT/lsp-servers.json"
 
 generate_lsp_config() {
-    local label="${1:-Step 11b · LSP Config}"
+    local label="${1:-LSP · Config}"
     write_step "$label"
 
     local lsp_config='{"lspServers":{}}'
@@ -1419,9 +1419,9 @@ generate_lsp_config() {
 generate_lsp_config
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Step 12: Clean up stale skill symlinks
+# Cleanup: Stale Symlinks
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 12 · Stale Symlinks"
+write_step "Cleanup · Stale Symlinks"
 
 stale_count=0
 orphan_count=0
