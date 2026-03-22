@@ -1436,7 +1436,11 @@ function Generate-LspConfig {
                 $lspIncluded++
             } else {
                 $lspSkipped += $serverName
-                Write-Warn "$serverName — binary not functional, skipped"
+                if (Get-Command $cmd -ErrorAction SilentlyContinue) {
+                    Write-Warn "$serverName — found on PATH but not functional, skipped"
+                } else {
+                    Write-Info "$serverName — not installed (available in optional dependencies below)"
+                }
             }
         }
     } else {
@@ -1455,7 +1459,7 @@ function Generate-LspConfig {
     if ($lspIncluded -gt 0) {
         Write-Success "Generated $lspConfigPath ($lspIncluded servers)"
     } else {
-        Write-Info "No working LSP servers found — generated empty config"
+        Write-Info "No LSP servers installed yet — you can add them in optional dependencies"
     }
 
     $script:summary.LspConfigGenerated = $true
@@ -1655,7 +1659,17 @@ if (-not $NonInteractive) {
             Write-Warn "rust-analyzer found on PATH but not working"
         }
         if (-not (Get-Command rustup -ErrorAction SilentlyContinue)) {
-            Write-Info "rust-analyzer requires the Rust toolchain (rustup) — not installed, skipping"
+            Write-Host ""
+            Write-Host "  rust-analyzer gives the agent code intelligence for Rust files"
+            Write-Host "  (types, definitions, references)."
+            Write-Host ""
+            Write-Host "  It requires the Rust toolchain, which isn't installed."
+            Write-Host "  To install Rust, download rustup from:"
+            Write-Host ""
+            Write-Host "    https://rustup.rs"
+            Write-Host ""
+            Write-Host "  After installing Rust, re-run this setup to add rust-analyzer."
+            Write-Host ""
             $script:summary.OptionalSkipped += "rust-analyzer"
         } else {
             Write-Host ""
@@ -1947,7 +1961,7 @@ if ($script:summary.LspConfigGenerated) {
     Write-Color "  LSP servers:" "Cyan"
     Write-Color "    Configured:     $($script:summary.LspCount)" "Green"
     if ($script:summary.LspSkipped.Count -gt 0) {
-        Write-Color "    Skipped:        $($script:summary.LspSkipped -join ', ') (binary not functional)" "Yellow"
+        Write-Color "    Skipped:        $($script:summary.LspSkipped -join ', ') (not installed)" "Yellow"
     }
 }
 
