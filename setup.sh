@@ -1698,7 +1698,12 @@ if ! $NON_INTERACTIVE; then
             if command -v pipx &>/dev/null; then
                 write_info "Installing markitdown[all] via pipx..."
                 if pipx install 'markitdown[all]' 2>&1; then
-                    write_success "MarkItDown installed"
+                    if ! command -v markitdown &>/dev/null; then
+                        write_warn "MarkItDown installed but not on PATH yet"
+                        write_info "Run: pipx ensurepath   (then restart your shell)"
+                    else
+                        write_success "MarkItDown installed"
+                    fi
                     SUMMARY_OPTIONAL_INSTALLED+=("markitdown")
                 else
                     write_err "MarkItDown install failed"
