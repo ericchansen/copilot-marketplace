@@ -56,8 +56,7 @@ $script:preferSsh = $false
 
 # Config files to symlink (file symlinks)
 $configFileLinks = @(
-    @{ Name = "copilot-instructions.md" },
-    @{ Name = "lsp-config.json" }
+    @{ Name = "copilot-instructions.md" }
 )
 
 # Keys allowed to be patched from config.portable.json into config.json
@@ -120,6 +119,9 @@ $script:summary = [ordered]@{
     McpServersFailed  = @()
     McpEnvMissing     = @()
     McpConfigGenerated = $false
+    LspConfigGenerated = $false
+    LspCount = 0
+    LspSkipped = @()
     PluginJunctionsCleaned = 0
     PluginsInstalled  = @()
     PluginsSkipped    = @()
@@ -169,6 +171,40 @@ function Get-LinkTarget {
         return $target
     } catch {
         return $null
+    }
+}
+
+function Validate-LspBinary {
+    param([string]$Command, [string[]]$Arguments)
+    
+    $binary = Get-Command $Command -ErrorAction SilentlyContinue
+    if (-not $binary) { return $false }
+    
+    # Verify the binary actually executes (catches WSL finding Windows binaries that can't run)
+    try {
+        $initMsg = "Content-Length: 108`r`n`r`n{`"jsonrpc`":`"2.0`",`"id`":1,`"method`":`"initialize`",`"params`":{`"processId`":null,`"rootUri`":null,`"capabilities`":{}}}"
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $binary.Source
+        $psi.Arguments = ($Arguments -join " ")
+        $psi.RedirectStandardInput = $true
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
+        
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        $proc.StandardInput.Write($initMsg)
+        $proc.StandardInput.Close()
+        $proc.WaitForExit(5000) | Out-Null
+        
+        if (-not $proc.HasExited) {
+            $proc.Kill()
+        }
+        
+        # If process ran without crashing immediately, it's functional
+        return ($proc.ExitCode -ne 127 -and $proc.ExitCode -ne 1)
+    } catch {
+        return $false
     }
 }
 
@@ -1352,6 +1388,66 @@ Write-Success "Generated $mcpConfigPath ($($enabledServers.Count) servers)"
 $script:summary.McpConfigGenerated = $true
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Step 11b: Generate lsp-config.json
+# ─────────────────────────────────────────────────────────────────────────────
+Write-Step "Step 11b: Generate lsp-config.json"
+
+$lspServersPath = Join-Path $repoRoot "lsp-servers.json"
+$lspConfig = [ordered]@{ lspServers = [ordered]@{} }
+$lspIncluded = 0
+$lspSkipped = @()
+
+if (Test-Path $lspServersPath) {
+    $lspServers = Get-Content $lspServersPath -Raw | ConvertFrom-Json
+    
+    foreach ($prop in $lspServers.lspServers.PSObject.Properties) {
+        $serverName = $prop.Name
+        $serverDef = $prop.Value
+        $cmd = $serverDef.command
+        $args = @()
+        if ($serverDef.args) { $args = @($serverDef.args) }
+        
+        if (Validate-LspBinary -Command $cmd -Arguments $args) {
+            $entry = [ordered]@{}
+            $entry["command"] = $serverDef.command
+            $entry["args"] = @($serverDef.args)
+            $entry["fileExtensions"] = [ordered]@{}
+            foreach ($ext in $serverDef.fileExtensions.PSObject.Properties) {
+                $entry["fileExtensions"][$ext.Name] = $ext.Value
+            }
+            $lspConfig.lspServers[$serverName] = $entry
+            Write-Success "$serverName — validated and included"
+            $lspIncluded++
+        } else {
+            $lspSkipped += $serverName
+            Write-Warn "$serverName — binary not functional, skipped"
+        }
+    }
+} else {
+    Write-Warn "lsp-servers.json not found in repo — skipping LSP config generation"
+}
+
+$lspConfigPath = Join-Path $copilotHome "lsp-config.json"
+# Remove stale symlink
+if (Test-Path $lspConfigPath) {
+    $item = Get-Item $lspConfigPath -Force
+    if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+        Remove-Item $lspConfigPath -Force
+    }
+}
+
+$lspConfig | ConvertTo-Json -Depth 10 | Set-Content $lspConfigPath -Encoding UTF8
+if ($lspIncluded -gt 0) {
+    Write-Success "Generated $lspConfigPath ($lspIncluded servers)"
+} else {
+    Write-Info "No working LSP servers found — generated empty config"
+}
+
+$script:summary.LspConfigGenerated = $true
+$script:summary.LspCount = $lspIncluded
+$script:summary.LspSkipped = $lspSkipped
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Step 12: Clean up stale skill junctions
 # ─────────────────────────────────────────────────────────────────────────────
 Write-Step "Step 12: Clean up stale skill junctions"
@@ -1433,7 +1529,7 @@ if (-not $NonInteractive) {
     Write-Host ""
 
     # --- LSP Server Binaries ---
-    # Language servers used by lsp-config.json for code intelligence in the agent.
+    # Language servers — install if missing; lsp-config.json is generated in Step 11b
 
     # TypeScript Language Server (npm)
     if (Get-Command typescript-language-server -ErrorAction SilentlyContinue) {
@@ -1700,6 +1796,16 @@ if ($script:summary.McpConfigGenerated) {
     }
     if ($script:summary.McpEnvMissing.Count -gt 0) {
         Write-Color "    Env missing:    $($script:summary.McpEnvMissing -join ', ')" "Yellow"
+    }
+}
+
+# LSP servers
+if ($script:summary.LspConfigGenerated) {
+    Write-Host ""
+    Write-Color "  LSP servers:" "Cyan"
+    Write-Color "    Configured:     $($script:summary.LspCount)" "Green"
+    if ($script:summary.LspSkipped.Count -gt 0) {
+        Write-Color "    Skipped:        $($script:summary.LspSkipped -join ', ') (binary not functional)" "Yellow"
     }
 }
 
