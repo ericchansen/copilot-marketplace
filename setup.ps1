@@ -1636,25 +1636,45 @@ if (-not $NonInteractive) {
         }
     }
 
-    # --- MarkItDown (pip) ---
+    # --- MarkItDown (pipx preferred, pip fallback) ---
     if (Get-Command markitdown -ErrorAction SilentlyContinue) {
         Write-Success "MarkItDown already installed"
         $script:summary.OptionalSkipped += "markitdown"
     } else {
         $answer = Read-Host "Install MarkItDown? (converts PDF/Word/Excel to markdown) [Y/n]"
         if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
-            try {
-                Write-Info "Installing markitdown[all] via pip..."
-                pip install 'markitdown[all]'
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Success "MarkItDown installed"
-                    $script:summary.OptionalInstalled += "markitdown"
-                } else {
-                    Write-Err "MarkItDown install failed"
+            if (Get-Command pipx -ErrorAction SilentlyContinue) {
+                try {
+                    Write-Info "Installing markitdown[all] via pipx..."
+                    pipx install 'markitdown[all]'
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Success "MarkItDown installed"
+                        $script:summary.OptionalInstalled += "markitdown"
+                    } else {
+                        Write-Err "MarkItDown install failed"
+                        $script:summary.OptionalFailed += "markitdown"
+                    }
+                } catch {
+                    Write-Err "MarkItDown install failed: $_"
                     $script:summary.OptionalFailed += "markitdown"
                 }
-            } catch {
-                Write-Err "MarkItDown install failed: $_"
+            } elseif (Get-Command pip -ErrorAction SilentlyContinue) {
+                try {
+                    Write-Info "Installing markitdown[all] via pip..."
+                    pip install 'markitdown[all]'
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Success "MarkItDown installed"
+                        $script:summary.OptionalInstalled += "markitdown"
+                    } else {
+                        Write-Err "MarkItDown install failed"
+                        $script:summary.OptionalFailed += "markitdown"
+                    }
+                } catch {
+                    Write-Err "MarkItDown install failed: $_"
+                    $script:summary.OptionalFailed += "markitdown"
+                }
+            } else {
+                Write-Err "Neither pipx nor pip found — cannot install MarkItDown"
                 $script:summary.OptionalFailed += "markitdown"
             }
         } else {
