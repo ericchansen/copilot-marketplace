@@ -1979,7 +1979,7 @@ if ($script:summary.LspConfigGenerated) {
     Write-Host "  LSP Servers"
     Write-Host "    " -NoNewline; Write-Host "✓" -ForegroundColor Green -NoNewline; Write-Host " Configured      $($script:summary.LspCount)"
     if ($script:summary.LspSkipped.Count -gt 0) {
-        Write-Host "    " -NoNewline; Write-Host "─" -ForegroundColor DarkGray -NoNewline; Write-Host " Not installed   $($script:summary.LspSkipped -join ', ')" -ForegroundColor DarkGray
+        Write-Host "    " -NoNewline; Write-Host "─" -ForegroundColor DarkGray -NoNewline; Write-Host " Unavailable     $($script:summary.LspSkipped -join ', ')" -ForegroundColor DarkGray
     }
 }
 

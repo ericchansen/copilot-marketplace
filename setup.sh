@@ -1524,7 +1524,6 @@ if ! $NON_INTERACTIVE; then
         SUMMARY_OPTIONAL_SKIPPED+=("typescript-language-server")
     else
         if command -v typescript-language-server &>/dev/null; then
-            local tsl_path
             tsl_path=$(command -v typescript-language-server 2>/dev/null)
             if $IS_WSL && [[ "$tsl_path" == /mnt/* ]]; then
                 write_warn "typescript-language-server found but it's a Windows binary — can't run in WSL"
@@ -1563,7 +1562,6 @@ if ! $NON_INTERACTIVE; then
         SUMMARY_OPTIONAL_SKIPPED+=("pyright-langserver")
     else
         if command -v pyright-langserver &>/dev/null; then
-            local pyr_path
             pyr_path=$(command -v pyright-langserver 2>/dev/null)
             if $IS_WSL && [[ "$pyr_path" == /mnt/* ]]; then
                 write_warn "pyright-langserver found but it's a Windows binary — can't run in WSL"
@@ -1602,7 +1600,6 @@ if ! $NON_INTERACTIVE; then
         SUMMARY_OPTIONAL_SKIPPED+=("rust-analyzer")
     else
         if command -v rust-analyzer &>/dev/null; then
-            local ra_path
             ra_path=$(command -v rust-analyzer 2>/dev/null)
             if $IS_WSL && [[ "$ra_path" == /mnt/* ]]; then
                 write_warn "rust-analyzer found but it's a Windows binary — can't run in WSL"
@@ -1894,7 +1891,7 @@ if [[ "$SUMMARY_LSP_GENERATED" == true ]]; then
     echo -e "  ${BOLD}LSP Servers${NC}"
     echo -e "    ${GREEN}✓${NC} Configured      $SUMMARY_LSP_COUNT"
     if ((${#SUMMARY_LSP_SKIPPED[@]} > 0)); then
-        echo -e "    ${DIM}─${NC} ${DIM}Not installed    ${SUMMARY_LSP_SKIPPED[*]}${NC}"
+        echo -e "    ${DIM}─${NC} ${DIM}Unavailable     ${SUMMARY_LSP_SKIPPED[*]}${NC}"
     fi
 fi
 
