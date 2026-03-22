@@ -138,20 +138,50 @@ declare -a SUMMARY_OPTIONAL_FAILED=()
 # Helper Functions
 # =============================================================================
 
-# Colors
+# Colors & styles
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 WHITE='\033[1;37m'
 GRAY='\033[0;90m'
+BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m'
 
-write_success() { echo -e "  ${GREEN}✓ $1${NC}"; }
-write_info()    { echo -e "  ${CYAN}ℹ $1${NC}"; }
-write_warn()    { echo -e "  ${YELLOW}⚠ $1${NC}"; }
-write_err()     { echo -e "  ${RED}✗ $1${NC}"; }
-write_step()    { echo ""; echo -e "${CYAN}▸ $1${NC}"; }
+write_success() { echo -e "  ${GREEN}✓${NC} $1"; }
+write_info()    { echo -e "  ${CYAN}ℹ${NC} ${DIM}$1${NC}"; }
+write_warn()    { echo -e "  ${YELLOW}⚠${NC} $1"; }
+write_err()     { echo -e "  ${RED}✗${NC} $1"; }
+write_step()    { echo ""; echo -e "${BOLD}${CYAN}  $1${NC}"; }
+
+# Box-drawing helpers
+draw_header() {
+    local text="$1"
+    local extra_width="${2:-0}"
+    local len=$(( ${#text} + extra_width ))
+    local pad=$((len + 4))
+    local line
+    line=$(printf '─%.0s' $(seq 1 "$pad"))
+    echo ""
+    echo -e "  ${CYAN}╭${line}╮${NC}"
+    echo -e "  ${CYAN}│${NC}  ${BOLD}$text${NC}  ${CYAN}│${NC}"
+    echo -e "  ${CYAN}╰${line}╯${NC}"
+}
+
+draw_section() {
+    local text="$1"
+    local width=40
+    local text_len=${#text}
+    local left_pad=$(( (width - text_len - 2) / 2 ))
+    local right_pad=$(( width - text_len - 2 - left_pad ))
+    local left right
+    left=$(printf '─%.0s' $(seq 1 "$left_pad"))
+    right=$(printf '─%.0s' $(seq 1 "$right_pad"))
+    echo ""
+    echo -e "  ${CYAN}${left}${NC} ${BOLD}$text${NC} ${CYAN}${right}${NC}"
+    echo ""
+}
 
 resolve_path() {
     # Portable realpath: works on macOS and Linux
@@ -605,15 +635,13 @@ REPOS_JSON="$EXTERNAL_REPOS_JSON"
 # Main Script
 # =============================================================================
 
-echo ""
-echo -e "${CYAN}📦 Copilot Config & Skills Setup${NC}"
-echo -e "${CYAN}=================================${NC}"
+draw_header "📦  Copilot Config & Skills Setup" 1
 echo ""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Preflight: Git authentication
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Preflight: Git authentication"
+write_step "Preflight · Git Authentication"
 
 # Check for GitHub CLI
 if command -v gh &>/dev/null; then
@@ -648,7 +676,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 1: Backup ~/.copilot/
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 1: Backup existing ~/.copilot/"
+write_step "Step 1 · Backup"
 
 BACKUP_TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
 
@@ -702,7 +730,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 2: Ensure directories exist
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 2: Ensure directories"
+write_step "Step 2 · Directories"
 
 ensure_dir "$COPILOT_HOME"
 ensure_dir "$COPILOT_SKILLS_HOME"
@@ -711,7 +739,7 @@ write_success "~/.copilot/ and ~/.copilot/skills/ exist"
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 3: Symlink config files
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 3: Symlink config files"
+write_step "Step 3 · Config Symlinks"
 
 for cfg_name in "${CONFIG_FILE_LINKS[@]}"; do
     target_path="$REPO_COPILOT_DIR/$cfg_name"
@@ -744,7 +772,7 @@ done
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 4: Patch config.json with portable settings
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 4: Patch config.json"
+write_step "Step 4 · Patch config.json"
 
 # Create config.json if it doesn't exist
 if [[ ! -f "$CONFIG_JSON" ]]; then
@@ -767,7 +795,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 5: Add repo path to trusted_folders
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 5: Trusted folders"
+write_step "Step 5 · Trusted Folders"
 
 RESOLVED_REPO_ROOT=$(resolve_path "$REPO_ROOT")
 
@@ -782,7 +810,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 6: Remove beads marketplace
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 6: Remove beads marketplace"
+write_step "Step 6 · Clean Marketplace"
 
 if jq -e '.marketplaces' "$CONFIG_JSON" &>/dev/null; then
     # Handle object with named keys
@@ -811,7 +839,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 7: Symlink local custom skills
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 7: Symlink local custom skills"
+write_step "Step 7 · Skills"
 
 # Collect local skills
 declare -A LOCAL_SKILL_PATHS=()
@@ -851,7 +879,7 @@ fi
 # Step 7b: Clean up old anthropic/awesome-copilot skill junctions
 # ─────────────────────────────────────────────────────────────────────────────
 # These repos are now installed via Copilot CLI plugins, not manual cloning.
-write_step "Step 7b: Clean up legacy skill junctions (anthropic, awesome-copilot, msx-mcp, SPT-IQ)"
+write_step "Step 7b · Legacy Cleanup"
 
 legacy_cleaned=0
 
@@ -897,7 +925,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 7c: Install Copilot CLI plugins
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 7c: Install plugins"
+write_step "Step 7c · Plugins"
 
 # Filter plugins based on flags
 if $INCLUDE_WORK; then
@@ -940,7 +968,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 8: Clone/pull external skill repos and symlink
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 8: External skill repositories"
+write_step "Step 8 · External Repos"
 
 # Track all skills: linked_skills[name] = source, skill_paths[name] = path
 declare -A LINKED_SKILLS=()
@@ -1103,7 +1131,7 @@ done
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 9: Resolve & build local MCP servers
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 9: Resolve & build local MCP servers"
+write_step "Step 9 · MCP Servers (Build)"
 
 # Determine enabled categories
 ENABLED_CATEGORIES='["base"]'
@@ -1235,7 +1263,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 10: Validate MCP server environment variables
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 10: Validate MCP environment variables"
+write_step "Step 10 · MCP Environment"
 
 while IFS= read -r server_json; do
     server_name=$(echo "$server_json" | jq -r '.name')
@@ -1267,7 +1295,7 @@ done < <(echo "$ENABLED_SERVERS" | jq -c '.[]')
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 11: Generate ~/.copilot/mcp-config.json
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 11: Generate mcp-config.json"
+write_step "Step 11 · MCP Config"
 
 MCP_CONFIG='{"mcpServers":{}}'
 
@@ -1330,7 +1358,7 @@ SUMMARY_MCP_GENERATED=true
 LSP_SERVERS_JSON="$REPO_ROOT/lsp-servers.json"
 
 generate_lsp_config() {
-    local label="${1:-Step 11b: Generate lsp-config.json}"
+    local label="${1:-Step 11b · LSP Config}"
     write_step "$label"
 
     local lsp_config='{"lspServers":{}}'
@@ -1393,7 +1421,7 @@ generate_lsp_config
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 12: Clean up stale skill symlinks
 # ─────────────────────────────────────────────────────────────────────────────
-write_step "Step 12: Clean up stale skill symlinks"
+write_step "Step 12 · Stale Symlinks"
 
 stale_count=0
 orphan_count=0
@@ -1455,14 +1483,10 @@ fi
 # Step 12b: Optional Dependencies
 # ─────────────────────────────────────────────────────────────────────────────
 if ! $NON_INTERACTIVE; then
-    echo ""
-    echo -e "${CYAN}═══════════════════════════════════${NC}"
-    echo -e "  ${CYAN}Optional Dependencies${NC}"
-    echo -e "${CYAN}═══════════════════════════════════${NC}"
-    echo ""
-    echo "These tools enhance specific skills. You can install them now"
-    echo "or later. The agent works without them but some skills will"
-    echo "be limited."
+    draw_section "Optional Dependencies"
+    echo -e "  ${DIM}These tools enhance specific skills. You can install them now${NC}"
+    echo -e "  ${DIM}or later. The agent works without them but some skills will${NC}"
+    echo -e "  ${DIM}be limited.${NC}"
     echo ""
 
     # --- LSP Server Binaries ---
@@ -1759,8 +1783,8 @@ if ! $NON_INTERACTIVE; then
         echo "  screenshots, click buttons, fill forms, and verify web apps."
         echo "  The Edge driver is used for browser automation."
         echo ""
-        read -rp "  Install Playwright Edge driver? [Y/n] " answer
-        if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
+        read -rp "  Install Playwright Edge driver? [y/N] " answer
+        if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
             write_info "Installing Playwright Edge driver..."
             if npx playwright install msedge 2>&1; then
                 write_success "Playwright Edge driver installed"
@@ -1790,32 +1814,29 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 13: Summary
 # ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo -e "${CYAN}═══════════════════════════════════${NC}"
-echo -e "  ${GREEN}✨ Setup Complete${NC}"
-echo -e "${CYAN}═══════════════════════════════════${NC}"
+draw_header "✨  Setup Complete" 1
 echo ""
 
 if $SUMMARY_BACKED_UP; then
-    echo -e "  ${WHITE}Backup:           ~/.copilot-backup-$BACKUP_TIMESTAMP/${NC}"
+    echo -e "  ${DIM}Backup${NC}           ~/.copilot-backup-$BACKUP_TIMESTAMP/"
 fi
 
 linked_count=${#SUMMARY_CONFIG_LINKED[@]}
 skipped_cfg=${#SUMMARY_CONFIG_SKIPPED[@]}
 if [[ $linked_count -gt 0 || $skipped_cfg -gt 0 ]]; then
-    echo -e "  ${WHITE}Config symlinks:  $linked_count linked, $skipped_cfg skipped${NC}"
+    echo -e "  ${DIM}Config${NC}           $linked_count linked, $skipped_cfg skipped"
 fi
 
 if $SUMMARY_CONFIG_PATCHED; then
-    echo -e "  ${WHITE}Config patched:   $(IFS=', '; echo "${PORTABLE_ALLOWED_KEYS[*]}")${NC}"
+    echo -e "  ${DIM}Patched${NC}          $(IFS=', '; echo "${PORTABLE_ALLOWED_KEYS[*]}")"
 fi
 
 if $SUMMARY_TRUSTED_FOLDER; then
-    echo -e "  ${WHITE}Trusted folder:   $RESOLVED_REPO_ROOT (added)${NC}"
+    echo -e "  ${DIM}Trusted folder${NC}   $RESOLVED_REPO_ROOT"
 fi
 
 if $SUMMARY_BEADS_REMOVED; then
-    echo -e "  ${WHITE}Marketplace:      beads-marketplace removed${NC}"
+    echo -e "  ${DIM}Marketplace${NC}      beads removed"
 fi
 
 created_count=${#SUMMARY_SKILLS_CREATED[@]}
@@ -1824,13 +1845,13 @@ skipped_count=${#SUMMARY_SKILLS_SKIPPED[@]}
 failed_count=${#SUMMARY_SKILLS_FAILED[@]}
 
 echo ""
-echo -e "  ${CYAN}Skills (no allowlist — all linked):${NC}"
-[[ $created_count -gt 0 ]] && echo -e "    ${GREEN}Created:        $created_count${NC}"
-[[ $existed_count -gt 0 ]] && echo -e "    ${CYAN}Already linked: $existed_count${NC}"
-[[ $skipped_count -gt 0 ]] && echo -e "    ${YELLOW}Skipped:        $skipped_count${NC}"
-[[ $failed_count  -gt 0 ]] && echo -e "    ${RED}Failed:         $failed_count${NC}"
+echo -e "  ${BOLD}Skills${NC}"
+[[ $created_count -gt 0 ]] && echo -e "    ${GREEN}✓${NC} Created         $created_count"
+[[ $existed_count -gt 0 ]] && echo -e "    ${DIM}✓${NC} ${DIM}Already linked  $existed_count${NC}"
+[[ $skipped_count -gt 0 ]] && echo -e "    ${YELLOW}⚠${NC} Skipped         $skipped_count"
+[[ $failed_count  -gt 0 ]] && echo -e "    ${RED}✗${NC} Failed          $failed_count"
 if [[ $created_count -eq 0 && $existed_count -eq 0 && $skipped_count -eq 0 && $failed_count -eq 0 ]]; then
-    echo -e "    ${GRAY}(none)${NC}"
+    echo -e "    ${DIM}(none)${NC}"
 fi
 
 ext_cloned=${#SUMMARY_EXTERNAL_CLONED[@]}
@@ -1838,65 +1859,65 @@ ext_pulled=${#SUMMARY_EXTERNAL_PULLED[@]}
 ext_failed=${#SUMMARY_EXTERNAL_FAILED[@]}
 if [[ $ext_cloned -gt 0 || $ext_pulled -gt 0 || $ext_failed -gt 0 ]]; then
     echo ""
-    echo -e "  ${CYAN}External repos:${NC}"
-    [[ $ext_cloned -gt 0 ]] && echo -e "    ${GREEN}Cloned:         $ext_cloned${NC}"
-    [[ $ext_pulled -gt 0 ]] && echo -e "    ${CYAN}Updated:        $ext_pulled${NC}"
-    [[ $ext_failed -gt 0 ]] && echo -e "    ${RED}Failed:         $ext_failed${NC}"
+    echo -e "  ${BOLD}External Repos${NC}"
+    [[ $ext_cloned -gt 0 ]] && echo -e "    ${GREEN}✓${NC} Cloned          $ext_cloned"
+    [[ $ext_pulled -gt 0 ]] && echo -e "    ${DIM}✓${NC} ${DIM}Updated         $ext_pulled${NC}"
+    [[ $ext_failed -gt 0 ]] && echo -e "    ${RED}✗${NC} Failed          $ext_failed"
 fi
 
 if [[ ${#SUMMARY_CONFLICTS[@]} -gt 0 ]]; then
     echo ""
-    echo -e "  ${YELLOW}Conflicts resolved:${NC}"
+    echo -e "  ${BOLD}Conflicts${NC}"
     for c in "${SUMMARY_CONFLICTS[@]}"; do
-        echo -e "    ${YELLOW}• $c${NC}"
+        echo -e "    ${YELLOW}⚠${NC} $c"
     done
 fi
 
 if $SUMMARY_MCP_GENERATED; then
     echo ""
-    echo -e "  ${CYAN}MCP servers:${NC}"
-    echo -e "    ${GREEN}Configured:     $ENABLED_COUNT${NC}"
+    echo -e "  ${BOLD}MCP Servers${NC}"
+    echo -e "    ${GREEN}✓${NC} Configured      $ENABLED_COUNT"
     if [[ ${#SUMMARY_MCP_BUILT[@]} -gt 0 ]]; then
-        echo -e "    ${GREEN}Built:          $(IFS=', '; echo "${SUMMARY_MCP_BUILT[*]}")${NC}"
+        echo -e "    ${GREEN}✓${NC} Built           $(IFS=', '; echo "${SUMMARY_MCP_BUILT[*]}")"
     fi
     if [[ ${#SUMMARY_MCP_FAILED[@]} -gt 0 ]]; then
-        echo -e "    ${RED}Build failed:   $(IFS=', '; echo "${SUMMARY_MCP_FAILED[*]}")${NC}"
+        echo -e "    ${RED}✗${NC} Build failed    $(IFS=', '; echo "${SUMMARY_MCP_FAILED[*]}")"
     fi
     if [[ ${#SUMMARY_MCP_ENV_MISSING[@]} -gt 0 ]]; then
-        echo -e "    ${YELLOW}Env missing:    $(IFS=', '; echo "${SUMMARY_MCP_ENV_MISSING[*]}")${NC}"
+        echo -e "    ${YELLOW}⚠${NC} Env missing     $(IFS=', '; echo "${SUMMARY_MCP_ENV_MISSING[*]}")"
     fi
 fi
 
 # LSP servers
 if [[ "$SUMMARY_LSP_GENERATED" == true ]]; then
     echo ""
-    echo -e "  ${CYAN}LSP servers:${NC}"
-    echo -e "    ${GREEN}Configured:     $SUMMARY_LSP_COUNT${NC}"
+    echo -e "  ${BOLD}LSP Servers${NC}"
+    echo -e "    ${GREEN}✓${NC} Configured      $SUMMARY_LSP_COUNT"
     if ((${#SUMMARY_LSP_SKIPPED[@]} > 0)); then
-        echo -e "    ${YELLOW}Skipped:        ${SUMMARY_LSP_SKIPPED[*]} (not installed)${NC}"
+        echo -e "    ${DIM}─${NC} ${DIM}Not installed    ${SUMMARY_LSP_SKIPPED[*]}${NC}"
     fi
 fi
 
 if [[ $SUMMARY_PLUGIN_JUNCTIONS_CLEANED -gt 0 ]]; then
     echo ""
-    echo -e "  ${CYAN}Legacy cleanup:${NC}"
-    echo -e "    ${YELLOW}Junctions removed: $SUMMARY_PLUGIN_JUNCTIONS_CLEANED (now use plugins)${NC}"
+    echo -e "  ${BOLD}Legacy Cleanup${NC}"
+    echo -e "    ${YELLOW}⚠${NC} Junctions       $SUMMARY_PLUGIN_JUNCTIONS_CLEANED removed"
 fi
 
 if [[ ${#SUMMARY_PLUGINS_INSTALLED[@]} -gt 0 || ${#SUMMARY_PLUGINS_SKIPPED[@]} -gt 0 || ${#SUMMARY_PLUGINS_FAILED[@]} -gt 0 ]]; then
     echo ""
-    echo -e "  ${CYAN}Plugins:${NC}"
-    [[ ${#SUMMARY_PLUGINS_INSTALLED[@]} -gt 0 ]] && echo -e "    ${GREEN}Installed:      ${SUMMARY_PLUGINS_INSTALLED[*]}${NC}"
-    [[ ${#SUMMARY_PLUGINS_SKIPPED[@]}  -gt 0 ]] && echo -e "    ${CYAN}Already there:  ${SUMMARY_PLUGINS_SKIPPED[*]}${NC}"
-    [[ ${#SUMMARY_PLUGINS_FAILED[@]}   -gt 0 ]] && echo -e "    ${RED}Failed:         ${SUMMARY_PLUGINS_FAILED[*]}${NC}"
+    echo -e "  ${BOLD}Plugins${NC}"
+    [[ ${#SUMMARY_PLUGINS_INSTALLED[@]} -gt 0 ]] && echo -e "    ${GREEN}✓${NC} Installed       ${SUMMARY_PLUGINS_INSTALLED[*]}"
+    [[ ${#SUMMARY_PLUGINS_SKIPPED[@]}  -gt 0 ]] && echo -e "    ${DIM}✓${NC} ${DIM}Already there   ${SUMMARY_PLUGINS_SKIPPED[*]}${NC}"
+    [[ ${#SUMMARY_PLUGINS_FAILED[@]}   -gt 0 ]] && echo -e "    ${RED}✗${NC} Failed          ${SUMMARY_PLUGINS_FAILED[*]}"
 fi
 
 if [[ ${#SUMMARY_OPTIONAL_INSTALLED[@]} -gt 0 || ${#SUMMARY_OPTIONAL_SKIPPED[@]} -gt 0 || ${#SUMMARY_OPTIONAL_FAILED[@]} -gt 0 ]]; then
     echo ""
-    echo -e "  ${CYAN}Optional tools:${NC}"
-    [[ ${#SUMMARY_OPTIONAL_INSTALLED[@]} -gt 0 ]] && echo -e "    ${GREEN}Installed:      ${SUMMARY_OPTIONAL_INSTALLED[*]}${NC}"
-    [[ ${#SUMMARY_OPTIONAL_SKIPPED[@]}  -gt 0 ]] && echo -e "    ${CYAN}Skipped:        ${SUMMARY_OPTIONAL_SKIPPED[*]}${NC}"
-    [[ ${#SUMMARY_OPTIONAL_FAILED[@]}   -gt 0 ]] && echo -e "    ${RED}Failed:         ${SUMMARY_OPTIONAL_FAILED[*]}${NC}"
+    echo -e "  ${BOLD}Optional Tools${NC}"
+    [[ ${#SUMMARY_OPTIONAL_INSTALLED[@]} -gt 0 ]] && echo -e "    ${GREEN}✓${NC} Installed       ${SUMMARY_OPTIONAL_INSTALLED[*]}"
+    [[ ${#SUMMARY_OPTIONAL_SKIPPED[@]}  -gt 0 ]] && echo -e "    ${DIM}─${NC} ${DIM}Skipped         ${SUMMARY_OPTIONAL_SKIPPED[*]}${NC}"
+    [[ ${#SUMMARY_OPTIONAL_FAILED[@]}   -gt 0 ]] && echo -e "    ${RED}✗${NC} Failed          ${SUMMARY_OPTIONAL_FAILED[*]}"
 fi
 
 echo ""
