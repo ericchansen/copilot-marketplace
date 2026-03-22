@@ -7,7 +7,7 @@ Personal [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/ab
 | File | Purpose |
 |------|---------|
 | `.copilot/copilot-instructions.md` | Global custom instructions for all sessions |
-| `.copilot/lsp-config.json` | Language server configuration (TypeScript, Python, Rust) |
+| `lsp-servers.json` | LSP server definitions (generates `~/.copilot/lsp-config.json`) |
 | `.copilot/config.portable.json` | Portable settings (model, theme, banner — no auth) |
 | `.copilot/skills/` | Custom skills (see below) |
 | `mcp-servers.json` | MCP server definitions (generates `~/.copilot/mcp-config.json`) |
@@ -141,7 +141,7 @@ MCP server configuration is defined in `mcp-servers.json` and generated into `~/
 
 ## LSP Servers
 
-Language server configuration is defined in `.copilot/lsp-config.json` and symlinked to `~/.copilot/lsp-config.json` during setup.
+Language server configuration is defined in `lsp-servers.json` and generated from it into `~/.copilot/lsp-config.json` during setup. Only servers with validated, functional binaries are included.
 
 | Server | Binary | Install Command |
 |--------|--------|----------------|

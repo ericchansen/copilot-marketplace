@@ -58,7 +58,7 @@ SSH_AVAILABLE=false
 PREFER_SSH=false
 
 # Config files to symlink
-CONFIG_FILE_LINKS=("copilot-instructions.md" "lsp-config.json")
+CONFIG_FILE_LINKS=("copilot-instructions.md")
 
 # Keys allowed to be patched from config.portable.json into config.json
 PORTABLE_ALLOWED_KEYS=("banner" "model" "render_markdown" "theme" "experimental" "reasoning_effort")
@@ -115,6 +115,9 @@ declare -a SUMMARY_MCP_BUILT=()
 declare -a SUMMARY_MCP_FAILED=()
 declare -a SUMMARY_MCP_ENV_MISSING=()
 SUMMARY_MCP_GENERATED=false
+SUMMARY_LSP_GENERATED=false
+SUMMARY_LSP_COUNT=0
+SUMMARY_LSP_SKIPPED=()
 SUMMARY_PLUGIN_JUNCTIONS_CLEANED=0
 declare -a SUMMARY_PLUGINS_INSTALLED=()
 declare -a SUMMARY_PLUGINS_SKIPPED=()
@@ -160,6 +163,28 @@ resolve_path() {
 
 ensure_dir() {
     [[ -d "$1" ]] || mkdir -p "$1"
+}
+
+# Validate that an LSP server binary exists and can actually execute.
+# Returns 0 if the server responds to an LSP initialize request, 1 otherwise.
+# Usage: validate_lsp_binary <command> [args...]
+validate_lsp_binary() {
+    local cmd="$1"
+    shift
+    local args=("$@")
+
+    # Must exist on PATH
+    if ! command -v "$cmd" &>/dev/null; then
+        return 1
+    fi
+
+    # Must actually execute and respond to LSP initialize
+    local init_msg='Content-Length: 108\r\n\r\n{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"processId":null,"rootUri":null,"capabilities":{}}}'
+    if echo -e "$init_msg" | timeout 5 "$cmd" "${args[@]}" >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 is_symlink() {
@@ -1270,6 +1295,60 @@ write_success "Generated $MCP_CONFIG_PATH ($ENABLED_COUNT servers)"
 SUMMARY_MCP_GENERATED=true
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Step 11b: Generate lsp-config.json
+# ─────────────────────────────────────────────────────────────────────────────
+write_step "Step 11b: Generate lsp-config.json"
+
+LSP_SERVERS_JSON="$REPO_ROOT/lsp-servers.json"
+LSP_CONFIG='{"lspServers":{}}'
+LSP_INCLUDED=0
+LSP_SKIPPED=()
+
+if [[ -f "$LSP_SERVERS_JSON" ]]; then
+    while IFS= read -r server_name; do
+        server_json=$(jq -c --arg name "$server_name" '.lspServers[$name]' "$LSP_SERVERS_JSON")
+        cmd=$(echo "$server_json" | jq -r '.command')
+        args_json=$(echo "$server_json" | jq -r '.args // [] | .[]')
+        
+        # Convert args JSON array to bash array
+        readarray -t cmd_args <<< "$args_json"
+        # Filter empty entries
+        cmd_args=("${cmd_args[@]}")
+        
+        if validate_lsp_binary "$cmd" "${cmd_args[@]}"; then
+            LSP_CONFIG=$(echo "$LSP_CONFIG" | jq --arg name "$server_name" --argjson entry "$server_json" \
+                '.lspServers[$name] = $entry')
+            write_success "$server_name — validated and included"
+            ((LSP_INCLUDED++))
+        else
+            LSP_SKIPPED+=("$server_name")
+            write_warn "$server_name — binary not functional, skipped"
+        fi
+    done < <(jq -r '.lspServers | keys[]' "$LSP_SERVERS_JSON")
+else
+    write_warn "lsp-servers.json not found in repo — skipping LSP config generation"
+fi
+
+LSP_CONFIG_PATH="$COPILOT_HOME/lsp-config.json"
+# Remove stale symlink so redirect can create a regular file
+if [ -L "$LSP_CONFIG_PATH" ]; then
+    rm -f "$LSP_CONFIG_PATH"
+fi
+
+if ((LSP_INCLUDED > 0)); then
+    echo "$LSP_CONFIG" | jq '.' > "$LSP_CONFIG_PATH"
+    write_success "Generated $LSP_CONFIG_PATH ($LSP_INCLUDED servers)"
+else
+    # Write empty config to prevent stale configs from being used
+    echo '{"lspServers":{}}' | jq '.' > "$LSP_CONFIG_PATH"
+    write_info "No working LSP servers found — generated empty config"
+fi
+
+SUMMARY_LSP_GENERATED=true
+SUMMARY_LSP_COUNT=$LSP_INCLUDED
+SUMMARY_LSP_SKIPPED=("${LSP_SKIPPED[@]}")
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Step 12: Clean up stale skill symlinks
 # ─────────────────────────────────────────────────────────────────────────────
 write_step "Step 12: Clean up stale skill symlinks"
@@ -1343,6 +1422,9 @@ if ! $NON_INTERACTIVE; then
     echo "or later. The agent works without them but some skills will"
     echo "be limited."
     echo ""
+
+    # --- LSP Server Binaries ---
+    # Language servers — install if missing; lsp-config.json is generated in Step 11b
 
     # --- LSP: typescript-language-server (npm) ---
     if command -v typescript-language-server &>/dev/null; then
@@ -1575,6 +1657,16 @@ if $SUMMARY_MCP_GENERATED; then
     fi
     if [[ ${#SUMMARY_MCP_ENV_MISSING[@]} -gt 0 ]]; then
         echo -e "    ${YELLOW}Env missing:    $(IFS=', '; echo "${SUMMARY_MCP_ENV_MISSING[*]}")${NC}"
+    fi
+fi
+
+# LSP servers
+if [[ "$SUMMARY_LSP_GENERATED" == true ]]; then
+    echo ""
+    echo -e "  ${CYAN}LSP servers:${NC}"
+    echo -e "    ${GREEN}Configured:     $SUMMARY_LSP_COUNT${NC}"
+    if ((${#SUMMARY_LSP_SKIPPED[@]} > 0)); then
+        echo -e "    ${YELLOW}Skipped:        ${SUMMARY_LSP_SKIPPED[*]} (binary not functional)${NC}"
     fi
 fi
 
