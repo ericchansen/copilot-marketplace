@@ -203,8 +203,10 @@ validate_lsp_binary() {
     # open (timeout kills it, exit 124). A broken binary crashes immediately.
     # We use process substitution to keep stdin open instead of /dev/null,
     # because LSP servers exit non-zero when stdin closes immediately.
+    # sleep 3 slightly outlasts the 2s timeout; the orphaned sleep is harmless
+    # and self-terminates quickly.
     local exit_code
-    "$timeout_bin" 2 "$cmd" "${args[@]}" < <(sleep 5) >/dev/null 2>&1
+    "$timeout_bin" 2 "$cmd" "${args[@]}" < <(sleep 3) >/dev/null 2>&1
     exit_code=$?
 
     if [[ $exit_code -eq 0 || $exit_code -eq 124 ]]; then
@@ -1331,9 +1333,10 @@ generate_lsp_config() {
     local label="${1:-Step 11b: Generate lsp-config.json}"
     write_step "$label"
 
-    LSP_CONFIG='{"lspServers":{}}'
-    LSP_INCLUDED=0
-    LSP_SKIPPED=()
+    local lsp_config='{"lspServers":{}}'
+    local lsp_included=0
+    local lsp_skipped=()
+    local server_name server_json cmd args_json cmd_args
 
     if [[ -f "$LSP_SERVERS_JSON" ]]; then
         while IFS= read -r server_name; do
@@ -1347,12 +1350,12 @@ generate_lsp_config() {
             fi
 
             if validate_lsp_binary "$cmd" "${cmd_args[@]}"; then
-                LSP_CONFIG=$(echo "$LSP_CONFIG" | jq --arg name "$server_name" --argjson entry "$server_json" \
+                lsp_config=$(echo "$lsp_config" | jq --arg name "$server_name" --argjson entry "$server_json" \
                     '.lspServers[$name] = $entry')
                 write_success "$server_name — validated and included"
-                ((LSP_INCLUDED++))
+                ((lsp_included++))
             else
-                LSP_SKIPPED+=("$server_name")
+                lsp_skipped+=("$server_name")
                 write_warn "$server_name — binary not functional, skipped"
             fi
         done < <(jq -r '.lspServers | keys[]' "$LSP_SERVERS_JSON")
@@ -1360,25 +1363,26 @@ generate_lsp_config() {
         write_warn "lsp-servers.json not found in repo — skipping LSP config generation"
     fi
 
-    LSP_CONFIG_PATH="$COPILOT_HOME/lsp-config.json"
-    if [ -L "$LSP_CONFIG_PATH" ]; then
-        rm -f "$LSP_CONFIG_PATH"
+    local lsp_config_path="$COPILOT_HOME/lsp-config.json"
+    if [ -L "$lsp_config_path" ]; then
+        rm -f "$lsp_config_path"
     fi
 
-    if ((LSP_INCLUDED > 0)); then
-        echo "$LSP_CONFIG" | jq '.' > "$LSP_CONFIG_PATH"
-        write_success "Generated $LSP_CONFIG_PATH ($LSP_INCLUDED servers)"
+    if ((lsp_included > 0)); then
+        echo "$lsp_config" | jq '.' > "$lsp_config_path"
+        write_success "Generated $lsp_config_path ($lsp_included servers)"
     else
-        echo '{"lspServers":{}}' | jq '.' > "$LSP_CONFIG_PATH"
+        echo '{"lspServers":{}}' | jq '.' > "$lsp_config_path"
         write_info "No working LSP servers found — generated empty config"
     fi
 
+    # Update summary globals
     SUMMARY_LSP_GENERATED=true
-    SUMMARY_LSP_COUNT=$LSP_INCLUDED
+    SUMMARY_LSP_COUNT=$lsp_included
+    SUMMARY_LSP_SKIPPED=("${lsp_skipped[@]}")
 }
 
 generate_lsp_config
-SUMMARY_LSP_SKIPPED=("${LSP_SKIPPED[@]}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 12: Clean up stale skill symlinks
@@ -1490,9 +1494,15 @@ if ! $NON_INTERACTIVE; then
         SUMMARY_OPTIONAL_SKIPPED+=("typescript-language-server")
     else
         if command -v typescript-language-server &>/dev/null; then
-            if $IS_WSL; then
+            local tsl_path
+            tsl_path=$(command -v typescript-language-server 2>/dev/null)
+            if $IS_WSL && [[ "$tsl_path" == /mnt/* ]]; then
                 write_warn "typescript-language-server found but it's a Windows binary — can't run in WSL"
+                write_info "Resolved path: $tsl_path"
                 write_info "A native Linux version is needed inside WSL."
+            elif $IS_WSL; then
+                write_warn "typescript-language-server found on PATH but not functional in WSL"
+                write_info "Resolved path: $tsl_path"
             else
                 write_warn "typescript-language-server found on PATH but not working"
             fi
@@ -1523,9 +1533,15 @@ if ! $NON_INTERACTIVE; then
         SUMMARY_OPTIONAL_SKIPPED+=("pyright-langserver")
     else
         if command -v pyright-langserver &>/dev/null; then
-            if $IS_WSL; then
+            local pyr_path
+            pyr_path=$(command -v pyright-langserver 2>/dev/null)
+            if $IS_WSL && [[ "$pyr_path" == /mnt/* ]]; then
                 write_warn "pyright-langserver found but it's a Windows binary — can't run in WSL"
+                write_info "Resolved path: $pyr_path"
                 write_info "A native Linux version is needed inside WSL."
+            elif $IS_WSL; then
+                write_warn "pyright-langserver found on PATH but not functional in WSL"
+                write_info "Resolved path: $pyr_path"
             else
                 write_warn "pyright-langserver found on PATH but not working"
             fi
@@ -1556,8 +1572,14 @@ if ! $NON_INTERACTIVE; then
         SUMMARY_OPTIONAL_SKIPPED+=("rust-analyzer")
     else
         if command -v rust-analyzer &>/dev/null; then
-            if $IS_WSL; then
+            local ra_path
+            ra_path=$(command -v rust-analyzer 2>/dev/null)
+            if $IS_WSL && [[ "$ra_path" == /mnt/* ]]; then
                 write_warn "rust-analyzer found but it's a Windows binary — can't run in WSL"
+                write_info "Resolved path: $ra_path"
+            elif $IS_WSL; then
+                write_warn "rust-analyzer found on PATH but not functional in WSL"
+                write_info "Resolved path: $ra_path"
             else
                 write_warn "rust-analyzer found on PATH but not working"
             fi
@@ -1616,7 +1638,7 @@ if ! $NON_INTERACTIVE; then
                             write_err "pipx install failed"
                         fi
                     else
-                        write_info "Skipped pipx — cannot install MarkItDown without it"
+                        write_info "Skipped pipx — will try pip directly (may fail on managed Python)"
                     fi
                 elif command -v brew &>/dev/null; then
                     read -rp "  Install pipx via brew? [Y/n] " pipx_answer
@@ -1628,7 +1650,7 @@ if ! $NON_INTERACTIVE; then
                             write_err "pipx install failed"
                         fi
                     else
-                        write_info "Skipped pipx — cannot install MarkItDown without it"
+                        write_info "Skipped pipx — will try pip directly (may fail on managed Python)"
                     fi
                 else
                     write_warn "Could not find apt or brew to install pipx."
