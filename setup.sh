@@ -1356,7 +1356,13 @@ generate_lsp_config() {
                 ((lsp_included++))
             else
                 lsp_skipped+=("$server_name")
-                write_warn "$server_name — binary not functional, skipped"
+                if command -v "$cmd" &>/dev/null; then
+                    # Binary exists but doesn't work — worth a warning
+                    write_warn "$server_name — found on PATH but not functional, skipped"
+                else
+                    # Binary not installed at all — expected, not alarming
+                    write_info "$server_name — not installed (available in optional dependencies below)"
+                fi
             fi
         done < <(jq -r '.lspServers | keys[]' "$LSP_SERVERS_JSON")
     else
@@ -1373,7 +1379,7 @@ generate_lsp_config() {
         write_success "Generated $lsp_config_path ($lsp_included servers)"
     else
         echo '{"lspServers":{}}' | jq '.' > "$lsp_config_path"
-        write_info "No working LSP servers found — generated empty config"
+        write_info "No LSP servers installed yet — you can add them in optional dependencies"
     fi
 
     # Update summary globals
@@ -1585,7 +1591,17 @@ if ! $NON_INTERACTIVE; then
             fi
         fi
         if ! command -v rustup &>/dev/null; then
-            write_info "rust-analyzer requires the Rust toolchain (rustup) — not installed, skipping"
+            echo ""
+            echo "  rust-analyzer gives the agent code intelligence for Rust files"
+            echo "  (types, definitions, references)."
+            echo ""
+            echo "  It requires the Rust toolchain, which isn't installed."
+            echo "  To install Rust (includes rustup, cargo, and rustc), run:"
+            echo ""
+            echo "    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+            echo ""
+            echo "  After installing Rust, re-run this setup to add rust-analyzer."
+            echo ""
             SUMMARY_OPTIONAL_SKIPPED+=("rust-analyzer")
         else
             echo ""
@@ -1857,7 +1873,7 @@ if [[ "$SUMMARY_LSP_GENERATED" == true ]]; then
     echo -e "  ${CYAN}LSP servers:${NC}"
     echo -e "    ${GREEN}Configured:     $SUMMARY_LSP_COUNT${NC}"
     if ((${#SUMMARY_LSP_SKIPPED[@]} > 0)); then
-        echo -e "    ${YELLOW}Skipped:        ${SUMMARY_LSP_SKIPPED[*]} (binary not functional)${NC}"
+        echo -e "    ${YELLOW}Skipped:        ${SUMMARY_LSP_SKIPPED[*]} (not installed)${NC}"
     fi
 fi
 
