@@ -1643,6 +1643,14 @@ if (-not $NonInteractive) {
     } else {
         $answer = Read-Host "Install MarkItDown? (converts PDF/Word/Excel to markdown) [Y/n]"
         if ($answer -eq "" -or $answer -eq "y" -or $answer -eq "Y") {
+            # Ensure pipx is available
+            if (-not (Get-Command pipx -ErrorAction SilentlyContinue)) {
+                if (Get-Command pip -ErrorAction SilentlyContinue) {
+                    Write-Info "Installing pipx (required for Python app installs)..."
+                    pip install --user pipx 2>&1 | Out-Null
+                }
+            }
+
             if (Get-Command pipx -ErrorAction SilentlyContinue) {
                 try {
                     Write-Info "Installing markitdown[all] via pipx..."
