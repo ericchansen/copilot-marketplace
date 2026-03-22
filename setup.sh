@@ -1445,6 +1445,22 @@ if ! $NON_INTERACTIVE; then
     # --- LSP Server Binaries ---
     # Language servers — install if missing; lsp-config.json is generated in Step 11b
 
+    # Determine if npm global install needs sudo (system-managed Node, e.g., apt)
+    NPM_NEEDS_SUDO=false
+    if command -v npm &>/dev/null; then
+        npm_prefix=$(npm config get prefix 2>/dev/null)
+        if [[ -n "$npm_prefix" ]] && ! [[ -w "$npm_prefix/lib" ]]; then
+            NPM_NEEDS_SUDO=true
+        fi
+    fi
+    npm_install_g() {
+        if $NPM_NEEDS_SUDO; then
+            sudo npm install -g "$@"
+        else
+            npm install -g "$@"
+        fi
+    }
+
     # --- LSP: typescript-language-server (npm) ---
     if validate_lsp_binary typescript-language-server --stdio; then
         write_success "typescript-language-server already installed"
@@ -1456,7 +1472,7 @@ if ! $NON_INTERACTIVE; then
         read -rp "Install typescript-language-server? (TypeScript/JS code intelligence) [Y/n] " answer
         if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
             write_info "Installing typescript-language-server via npm..."
-            if npm install -g typescript-language-server typescript 2>&1; then
+            if npm_install_g typescript-language-server typescript 2>&1; then
                 write_success "typescript-language-server installed"
                 SUMMARY_OPTIONAL_INSTALLED+=("typescript-language-server")
             else
@@ -1480,7 +1496,7 @@ if ! $NON_INTERACTIVE; then
         read -rp "Install pyright-langserver? (Python code intelligence) [Y/n] " answer
         if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
             write_info "Installing pyright via npm..."
-            if npm install -g pyright 2>&1; then
+            if npm_install_g pyright 2>&1; then
                 write_success "pyright-langserver installed"
                 SUMMARY_OPTIONAL_INSTALLED+=("pyright-langserver")
             else
@@ -1523,19 +1539,33 @@ if ! $NON_INTERACTIVE; then
         fi
     fi
 
-    # --- MarkItDown (pip) ---
+    # --- MarkItDown (pipx preferred, pip fallback) ---
     if command -v markitdown &>/dev/null; then
         write_success "MarkItDown already installed"
         SUMMARY_OPTIONAL_SKIPPED+=("markitdown")
     else
         read -rp "Install MarkItDown? (converts PDF/Word/Excel to markdown) [Y/n] " answer
         if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
-            write_info "Installing markitdown[all] via pip..."
-            if pip install 'markitdown[all]' 2>&1; then
-                write_success "MarkItDown installed"
-                SUMMARY_OPTIONAL_INSTALLED+=("markitdown")
+            if command -v pipx &>/dev/null; then
+                write_info "Installing markitdown[all] via pipx..."
+                if pipx install 'markitdown[all]' 2>&1; then
+                    write_success "MarkItDown installed"
+                    SUMMARY_OPTIONAL_INSTALLED+=("markitdown")
+                else
+                    write_err "MarkItDown install failed"
+                    SUMMARY_OPTIONAL_FAILED+=("markitdown")
+                fi
+            elif command -v pip &>/dev/null; then
+                write_info "Installing markitdown[all] via pip..."
+                if pip install 'markitdown[all]' 2>&1; then
+                    write_success "MarkItDown installed"
+                    SUMMARY_OPTIONAL_INSTALLED+=("markitdown")
+                else
+                    write_err "MarkItDown install failed (try: sudo apt install pipx && pipx install 'markitdown[all]')"
+                    SUMMARY_OPTIONAL_FAILED+=("markitdown")
+                fi
             else
-                write_err "MarkItDown install failed"
+                write_err "Neither pipx nor pip found — cannot install MarkItDown"
                 SUMMARY_OPTIONAL_FAILED+=("markitdown")
             fi
         else
@@ -1566,7 +1596,7 @@ if ! $NON_INTERACTIVE; then
             read -rp "Install QMD? (local hybrid search for memory, requires Node.js 22+) [Y/n] " answer
             if [[ -z "$answer" || "$answer" == "y" || "$answer" == "Y" ]]; then
                 write_info "Installing @tobilu/qmd via npm..."
-                if npm install -g @tobilu/qmd 2>&1; then
+                if npm_install_g @tobilu/qmd 2>&1; then
                     write_success "QMD installed"
                     SUMMARY_OPTIONAL_INSTALLED+=("qmd")
                 else
