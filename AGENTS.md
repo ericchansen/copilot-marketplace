@@ -21,17 +21,13 @@ This repo manages GitHub Copilot CLI configuration, custom skills, and MCP/LSP s
 | `mcp-servers.json` | MCP server definitions (generates mcp-config.json) | **No** — generates `~/.copilot/mcp-config.json` |
 | `.copilot/config.portable.json` | Portable settings (model, theme, etc.) | **No** — patched into `config.json` |
 | `.copilot/skills/` | Custom skills (local to this repo) | Directory junctions |
-| `setup.ps1` / `setup.sh` | Install: symlink configs, patch settings, link skills, clean legacy junctions | — |
-| `restore.ps1` / `restore.sh` | Uninstall: remove symlinks, optionally restore backups | — |
-| `backup.ps1` / `backup.sh` | Back up untracked config + session store to OneDrive | — |
-| `sync-skills.ps1` / `sync-skills.sh` | Adopt untracked skills from `~/.copilot/skills/` | — |
+| `setup.py` | CLI entry point (Python 3.10+): `setup`, `backup`, `restore`, `sync-skills` subcommands | — |
+| `lib/` | Modules: ui, platform_ops, config, skills, git_helpers, backup, restore, optional_deps | — |
+| `setup.ps1` / `setup.sh` | Thin wrappers that locate Python and call setup.py | — |
 
 ## Adding a New Tracked Config File
 
-Update **2 places** in `setup.ps1` (or `setup.sh` for the Bash version):
-
-1. `$configFileLinks` array
-2. Backup file list (`$configFiles`)
+Update the `CONFIG_FILES` list in `setup.py` and the `BACKUP_FILES` list in `lib/backup.py`.
 
 Then copy the file into `.copilot/`, replace the original in `~/.copilot/` with a symlink, and update `README.md`.
 
