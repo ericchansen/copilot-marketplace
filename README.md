@@ -302,6 +302,11 @@ copilot plugin install example-skills@anthropic-agent-skills     # frontend-desi
 
 For **consumers**, setup installs the plugin automatically with `--work`:
 ```bash
+python setup.py --work    # installs MSX-MCP plugin + enables Power BI
+```
+
+Or install manually:
+```bash
 copilot plugin install mcaps-microsoft/MSX-MCP
 ```
 
