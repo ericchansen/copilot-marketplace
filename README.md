@@ -300,9 +300,16 @@ copilot plugin install example-skills@anthropic-agent-skills     # frontend-desi
 
 ### MSX-MCP
 
+For **consumers**, setup installs the plugin automatically with `--work`:
 ```bash
 copilot plugin install mcaps-microsoft/MSX-MCP
 ```
+
+For **developers/maintainers**, clone the repo locally and setup will detect it:
+```bash
+git clone https://github.com/mcaps-microsoft/MSX-MCP.git ~/repos/MSX-MCP
+```
+When a local clone is found at `~/repos/MSX-MCP` (or `~/repos/msx-mcp`), setup uses it as an MCP server directly and **skips** the plugin install. This lets you edit code and have changes take effect immediately.
 
 ### Managing plugins
 

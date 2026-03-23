@@ -47,6 +47,19 @@
       "type": "http",
       "url": "https://api.fabric.microsoft.com/v1/mcp/powerbi",
       "tools": ["*"]
+    },
+    {
+      "name": "msx-mcp",
+      "category": "work",
+      "type": "local",
+      "command": "node",
+      "entryPoint": "dist/index.js",
+      "repo": "https://github.com/mcaps-microsoft/MSX-MCP.git",
+      "cloneDir": "MSX-MCP",
+      "defaultPaths": ["~/repos/MSX-MCP", "~/repos/msx-mcp"],
+      "build": ["npm install", "npm run build"],
+      "tools": ["*"],
+      "pluginFallback": "mcaps-microsoft/MSX-MCP"
     }
   ]
 }

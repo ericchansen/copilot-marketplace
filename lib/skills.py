@@ -128,8 +128,12 @@ def legacy_cleanup(
 # Plugin install
 # ---------------------------------------------------------------------------
 
-def install_plugins(ui, plugins: list[dict], summary: dict) -> None:
-    """Install Copilot CLI plugins that are not yet present."""
+def install_plugins(ui, plugins: list[dict], local_clone_names: set[str], summary: dict) -> None:
+    """Install Copilot CLI plugins that are not yet present.
+
+    Plugins whose name appears in *local_clone_names* are skipped because a
+    local development clone was detected (local-clone-wins pattern).
+    """
     if not shutil.which("copilot"):
         ui.print_msg("copilot CLI not found — skipping plugin install", "warn")
         return
@@ -140,6 +144,12 @@ def install_plugins(ui, plugins: list[dict], summary: dict) -> None:
     for plugin in plugins:
         name = plugin["name"]
         source = plugin["source"]
+
+        # Local-clone-wins: skip plugin when a dev clone exists
+        if name in local_clone_names:
+            ui.item(name, "info", "local clone detected — skipping plugin install")
+            summary["plugins_skipped"].append(name)
+            continue
 
         if installed_output and name in installed_output:
             ui.item(name, "exists", "already installed")
