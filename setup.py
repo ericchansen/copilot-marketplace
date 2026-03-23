@@ -308,17 +308,27 @@ def _run_setup(args: argparse.Namespace) -> None:
     plugins_to_install = [p for p in PLUGINS if not p.get("work") or include_work]
 
     # Detect which plugins have a local clone (local-clone-wins: skip plugin install)
-    mcp_data_pre = json.loads(mcp_servers_json.read_text("utf-8")) if mcp_servers_json.exists() else {"servers": []}
+    try:
+        mcp_data_pre = json.loads(mcp_servers_json.read_text("utf-8")) if mcp_servers_json.exists() else {"servers": []}
+    except json.JSONDecodeError:
+        mcp_data_pre = {"servers": []}
     local_clone_names: set[str] = set()
     for plugin in plugins_to_install:
         local_name = plugin.get("localServerName")
         if not local_name:
             continue
-        server_def = next((s for s in mcp_data_pre["servers"] if s["name"] == local_name), None)
+        server_def = next((s for s in mcp_data_pre.get("servers", []) if s["name"] == local_name), None)
         if not server_def:
             continue
+        entry_point = server_def.get("entryPoint", "")
         for dp in server_def.get("defaultPaths", []):
-            if Path(os.path.expanduser(dp)).is_dir():
+            candidate = Path(os.path.expanduser(dp))
+            # Validate it's a real clone: .git dir must exist, plus entry point if configured
+            if (
+                candidate.is_dir()
+                and (candidate / ".git").is_dir()
+                and (not entry_point or (candidate / entry_point).exists())
+            ):
                 local_clone_names.add(plugin["name"])
                 break
 
