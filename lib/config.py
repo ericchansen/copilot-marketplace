@@ -18,8 +18,15 @@ def patch_config_json(
     if not portable_path.exists():
         return False
 
-    config = json.loads(config_path.read_text("utf-8")) if config_path.exists() else {}
-    portable = json.loads(portable_path.read_text("utf-8"))
+    try:
+        config = json.loads(config_path.read_text("utf-8")) if config_path.exists() else {}
+    except json.JSONDecodeError:
+        config = {}
+
+    try:
+        portable = json.loads(portable_path.read_text("utf-8"))
+    except json.JSONDecodeError:
+        return False
 
     for key in allowed_keys:
         if key in portable:

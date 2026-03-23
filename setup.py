@@ -274,7 +274,11 @@ def _run_setup(args: argparse.Namespace) -> None:
 
     # ── Step 6: Setup · Trusted Folders ──────────────────────────────────
     ui.step("Setup · Trusted Folders")
-    config_obj = json.loads(config_json_path.read_text("utf-8")) if config_json_path.exists() else {}
+    try:
+        config_obj = json.loads(config_json_path.read_text("utf-8")) if config_json_path.exists() else {}
+    except json.JSONDecodeError:
+        ui.item("config.json", "warn", "invalid JSON — treating as empty")
+        config_obj = {}
     trusted = config_obj.get("trusted_folders", [])
     resolved_root = str(REPO_ROOT.resolve())
     already_trusted = any(str(Path(f).resolve()) == resolved_root for f in trusted)
@@ -323,6 +327,7 @@ def _run_setup(args: argparse.Namespace) -> None:
     mcp_paths: dict = json.loads(mcp_paths_file.read_text("utf-8")) if mcp_paths_file.exists() else {}
 
     abort_clones = False
+    failed_servers: list[dict] = []
     for server in enabled_servers:
         if server.get("type") != "local":
             continue
@@ -389,7 +394,11 @@ def _run_setup(args: argparse.Namespace) -> None:
                 summary["mcp_servers_built"].append(server["name"])
             else:
                 summary["mcp_servers_failed"].append(server["name"])
-                enabled_servers.remove(server)  # exclude from generated config
+                failed_servers.append(server)
+
+    # Remove failed builds after iteration completes (safe; avoids mutation during loop)
+    for s in failed_servers:
+        enabled_servers.remove(s)
 
     mcp_paths_file.write_text(json.dumps(mcp_paths, indent=2) + "\n", "utf-8")
 

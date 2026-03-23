@@ -27,7 +27,7 @@ This repo manages GitHub Copilot CLI configuration, custom skills, and MCP/LSP s
 
 ## Adding a New Tracked Config File
 
-Update the `CONFIG_FILES` list in `setup.py` and the `BACKUP_FILES` list in `lib/backup.py`.
+Update the `CONFIG_FILE_LINKS` mapping in `setup.py` and the `_CONFIG_FILES` / `_PERSONALIZATION_FILES` lists in `lib/backup.py`.
 
 Then copy the file into `.copilot/`, replace the original in `~/.copilot/` with a symlink, and update `README.md`.
 

@@ -218,7 +218,7 @@ def _clone_recovery_menu(display_name: str, repo_url: str, target: str, ui) -> s
             return "retry"
         if choice == "M":
             user_path = ui.prompt("Enter path to existing clone", default="")
-            if user_path and Path(user_path).is_dir():
+            if user_path and Path(user_path).is_dir() and Path(user_path, ".git").is_dir():
                 return f"manual:{user_path}"
             ui.print_msg("Invalid path", "err")
             continue
