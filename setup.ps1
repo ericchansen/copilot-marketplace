@@ -23,7 +23,9 @@ function Find-Python {
         if ($LASTEXITCODE -ne 0 -or -not $ver) { continue }
 
         $parts = $ver.Split('.')
-        if ([int]$parts[0] -ge 3 -and [int]$parts[1] -ge 10) {
+        $major = [int]$parts[0]
+        $minor = [int]$parts[1]
+        if ($major -gt 3 -or ($major -eq 3 -and $minor -ge 10)) {
             return $exe.Source
         }
     }

@@ -13,7 +13,7 @@ find_python() {
             local major minor
             major=${ver%%.*}
             minor=${ver#*.}
-            if [[ $major -ge 3 && $minor -ge 10 ]]; then
+            if [[ "$major" -gt 3 || ( "$major" -eq 3 && "$minor" -ge 10 ) ]]; then
                 echo "$cmd"
                 return 0
             fi

@@ -242,8 +242,13 @@ def cleanup_stale(
             # Only remove if target is under a managed root
             target = get_link_target(entry) if is_link(entry) else None
             if target is not None:
-                target_str = str(target)
-                if str(repo_root) in target_str or str(external_dir) in target_str:
+                target_path = Path(target).resolve()
+                repo_root_path = Path(repo_root).resolve()
+                external_dir_path = Path(external_dir).resolve()
+                if (
+                    target_path.is_relative_to(repo_root_path)
+                    or target_path.is_relative_to(external_dir_path)
+                ):
                     should_remove = True
 
         if not should_remove:
