@@ -69,6 +69,7 @@ PORTABLE_ALLOWED_KEYS = [
 ]
 
 PLUGINS = [
+    {"name": "aifmt", "source": "ericchansen/aifmt", "localServerName": "aifmt"},
     {"name": "msx-mcp", "source": "mcaps-microsoft/MSX-MCP", "work": True, "localServerName": "msx-mcp"},
 ]
 

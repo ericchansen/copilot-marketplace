@@ -58,14 +58,20 @@ def _build_mcp_entry(server: dict, mcp_paths: dict, external_dir: Path) -> dict:
     # type == "local"
     command = server["command"]
     entry_point = server.get("entryPoint", "")
-    stored = mcp_paths.get(server["name"])
-    if stored:
-        full_entry = str(Path(stored) / entry_point)
-    else:
-        clone_dir = server.get("cloneDir", server["name"])
-        full_entry = str(external_dir / clone_dir / entry_point)
-    full_entry = str(Path(full_entry).resolve())
-    return {"type": "local", "command": command, "args": [full_entry], "tools": tools}
+
+    if entry_point:
+        # File-based server: resolve entryPoint relative to clone path
+        stored = mcp_paths.get(server["name"])
+        if stored:
+            full_entry = str(Path(stored) / entry_point)
+        else:
+            clone_dir = server.get("cloneDir", server["name"])
+            full_entry = str(external_dir / clone_dir / entry_point)
+        full_entry = str(Path(full_entry).resolve())
+        return {"type": "local", "command": command, "args": [full_entry], "tools": tools}
+
+    # Command-based server: command IS the server (e.g., pip-installed console script)
+    return {"type": "local", "command": command, "args": server.get("args", []), "tools": tools}
 
 
 def generate_mcp_config(
