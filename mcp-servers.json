@@ -42,6 +42,18 @@
       "tools": ["*"]
     },
     {
+      "name": "aifmt",
+      "category": "base",
+      "type": "local",
+      "command": "aifmt",
+      "repo": "https://github.com/ericchansen/aifmt.git",
+      "cloneDir": "aifmt",
+      "defaultPaths": ["~/repos/aifmt"],
+      "build": ["pip install -e ."],
+      "tools": ["*"],
+      "pluginFallback": "ericchansen/aifmt"
+    },
+    {
       "name": "powerbi-remote",
       "category": "powerbi",
       "type": "http",
