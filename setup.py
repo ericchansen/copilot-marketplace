@@ -69,7 +69,7 @@ PORTABLE_ALLOWED_KEYS = [
 ]
 
 PLUGINS = [
-    {"name": "msx-mcp", "source": "mcaps-microsoft/MSX-MCP", "work": True},
+    {"name": "msx-mcp", "source": "mcaps-microsoft/MSX-MCP", "work": True, "localServerName": "msx-mcp"},
 ]
 
 STEP_NAMES = [
@@ -306,7 +306,23 @@ def _run_setup(args: argparse.Namespace) -> None:
     # ── Step 9: Skills · Plugins ─────────────────────────────────────────
     ui.step("Skills · Plugins")
     plugins_to_install = [p for p in PLUGINS if not p.get("work") or include_work]
-    install_plugins(ui, plugins_to_install, summary)
+
+    # Detect which plugins have a local clone (local-clone-wins: skip plugin install)
+    mcp_data_pre = json.loads(mcp_servers_json.read_text("utf-8")) if mcp_servers_json.exists() else {"servers": []}
+    local_clone_names: set[str] = set()
+    for plugin in plugins_to_install:
+        local_name = plugin.get("localServerName")
+        if not local_name:
+            continue
+        server_def = next((s for s in mcp_data_pre["servers"] if s["name"] == local_name), None)
+        if not server_def:
+            continue
+        for dp in server_def.get("defaultPaths", []):
+            if Path(os.path.expanduser(dp)).is_dir():
+                local_clone_names.add(plugin["name"])
+                break
+
+    install_plugins(ui, plugins_to_install, local_clone_names, summary)
     ui.end_step()
 
     # ── Step 10: Plugins · Update ────────────────────────────────────────
@@ -318,7 +334,7 @@ def _run_setup(args: argparse.Namespace) -> None:
     ui.step("MCP · Build Servers")
     enabled_categories = ["base"]
     if include_work:
-        enabled_categories.append("powerbi")
+        enabled_categories.extend(["powerbi", "work"])
     mcp_data = json.loads(mcp_servers_json.read_text("utf-8")) if mcp_servers_json.exists() else {"servers": []}
     enabled_servers = [s for s in mcp_data["servers"] if s.get("category", "base") in enabled_categories]
 
