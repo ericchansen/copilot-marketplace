@@ -6,6 +6,8 @@ Personal [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/ab
 
 | File | Purpose |
 |------|---------|
+| `setup.py` | CLI: setup, backup, restore, sync-skills (Python 3.10+, stdlib only) |
+| `lib/` | Modules: ui, platform_ops, config, skills, git_helpers, backup, restore, optional_deps |
 | `.copilot/copilot-instructions.md` | Global custom instructions for all sessions |
 | `lsp-servers.json` | LSP server definitions (generates `~/.copilot/lsp-config.json`) |
 | `.copilot/config.portable.json` | Portable settings (model, theme, banner — no auth) |
@@ -20,32 +22,24 @@ Personal [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/ab
    cd ~/repos/copilot-config
    ```
 
-2. **Run the setup script:**
+2. **Run setup** (requires Python 3.10+):
 
-   **PowerShell (Windows):**
-   ```powershell
-   ./setup.ps1                                           # Interactive — prompts for options
-   ./setup.ps1 -Work                                     # Include work tools (MSX-MCP, Power BI)
-   ./setup.ps1 -NonInteractive                           # No prompts, base only (safe for cron)
-   ./setup.ps1 -NonInteractive -Work                     # No prompts, everything enabled
-   ```
-
-   **Bash (macOS/Linux):**
    ```bash
-   ./setup.sh                                            # Interactive — prompts for options
-   ./setup.sh --work                                     # Include work tools (MSX-MCP, Power BI)
-   ./setup.sh --non-interactive                          # No prompts, base only (safe for cron)
-   ./setup.sh --non-interactive --work                   # No prompts, everything enabled
+   python setup.py                       # Interactive — prompts for options
+   python setup.py --work                # Include work tools (MSX-MCP, Power BI)
+   python setup.py --non-interactive     # No prompts, base only (safe for cron)
+   python setup.py --clean-orphans       # Remove skills not managed by this repo
    ```
 
-   > **Note:** The Bash scripts require `jq` for JSON processing and Bash 4+. On macOS, install both with `brew install bash jq`.
+   Or use the thin wrapper scripts (`setup.sh` / `setup.ps1`) which locate Python automatically.
 
-The setup script will:
+The setup script (Python 3.10+, stdlib only, cross-platform) will:
 - **Check git authentication** — detects SSH keys and GitHub CLI accounts, uses `gh auth token` for clone fallbacks (no browser popups)
 - Back up your existing `~/.copilot/` config
 - Symlink instructions and skills into `~/.copilot/`
 - Patch your `config.json` with portable settings (without touching auth)
 - **Clean up legacy skill junctions** — removes old anthropic/awesome-copilot/msx-mcp/SPT-IQ junctions from previous setups
+- **Auto-update plugins** — updates all installed community plugins (skips `@local`)
 - Build local MCP servers (clone, install deps, compile)
 - Validate required environment variables (prompt if missing)
 - Generate `~/.copilot/mcp-config.json` with correct OS paths
@@ -156,8 +150,7 @@ The setup script offers to install these as optional dependencies. They provide 
 ```bash
 cd ~/repos/copilot-config
 git pull
-./setup.ps1   # Windows (PowerShell)
-./setup.sh    # macOS/Linux (Bash)
+python setup.py          # Or: ./setup.ps1 / ./setup.sh
 ```
 
 ## Backing Up
@@ -177,14 +170,9 @@ Some personalization files live in `~/.copilot/` but aren't tracked by this repo
 
 **Run a backup:**
 
-```powershell
-./backup.ps1                     # Full backup (config + session store)
-./backup.ps1 -SkipSessionStore   # Config files only (faster)
-```
-
 ```bash
-./backup.sh                      # Full backup (config + session store)
-./backup.sh --skip-session       # Config files only (faster)
+python setup.py backup                # Full backup (config + session store)
+python setup.py backup --skip-session # Config files only (faster)
 ```
 
 **Where backups go:** `<OneDrive sync root>/Documents/Copilot Config Backup/`
@@ -195,15 +183,15 @@ Some personalization files live in `~/.copilot/` but aren't tracked by this repo
 - Session store snapshots are date-stamped in `session-snapshots/` with a `session-store-latest.db` for quick restore
 - OneDrive sync client handles cloud upload automatically
 
-> **Tip:** Run `./backup.ps1` periodically (weekly, or before major changes). Session history is the only thing that can't be recreated.
+> **Tip:** Run `python setup.py backup` periodically (weekly, or before major changes). Session history is the only thing that can't be recreated.
 
 ## Restoring
 
-If something breaks, use the restore script to remove all symlinks and optionally restore from backup:
+If something breaks, use the restore subcommand to remove all symlinks and optionally restore from backup:
 
-```powershell
-./restore.ps1   # Windows (PowerShell)
-./restore.sh    # macOS/Linux (Bash)
+```bash
+python setup.py restore                # Interactive — asks about backup restore
+python setup.py restore --non-interactive  # Just remove links, no restore prompt
 ```
 
 ### Restoring from a machine wipe
@@ -217,14 +205,14 @@ After a fresh OS install:
    ```powershell
    git clone git@github.com:ericchansen/copilot-config.git ~/repos/copilot-config
    cd ~/repos/copilot-config
-   ./setup.ps1 -Work
+   python setup.py --work
    ```
 
    **macOS/Linux (Bash):**
    ```bash
    git clone git@github.com:ericchansen/copilot-config.git ~/repos/copilot-config
    cd ~/repos/copilot-config
-   ./setup.sh --work
+   python setup.py --work
    ```
 3. Copy personalization files back from OneDrive:
    ```powershell
