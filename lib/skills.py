@@ -128,11 +128,13 @@ def legacy_cleanup(
 # Plugin install
 # ---------------------------------------------------------------------------
 
-def install_plugins(ui, plugins: list[dict], local_clone_names: set[str], summary: dict) -> None:
+
+def install_plugins(ui, plugins: list[dict], local_clone_map: dict[str, Path], summary: dict) -> None:
     """Install Copilot CLI plugins that are not yet present.
 
-    Plugins whose name appears in *local_clone_names* are skipped because a
-    local development clone was detected (local-clone-wins pattern).
+    Plugins whose name appears in *local_clone_map* are skipped because a
+    local development clone was detected (local-clone-wins pattern).  Their
+    skills and agents are linked separately by :func:`link_local_plugins`.
     """
     if not shutil.which("copilot"):
         ui.print_msg("copilot CLI not found — skipping plugin install", "warn")
@@ -146,7 +148,7 @@ def install_plugins(ui, plugins: list[dict], local_clone_names: set[str], summar
         source = plugin["source"]
 
         # Local-clone-wins: skip plugin when a dev clone exists
-        if name in local_clone_names:
+        if name in local_clone_map:
             ui.item(name, "info", "local clone detected — skipping plugin install")
             summary["plugins_skipped"].append(name)
             continue
@@ -163,6 +165,97 @@ def install_plugins(ui, plugins: list[dict], local_clone_names: set[str], summar
         else:
             ui.item(name, "failed", f"install failed for {source}")
             summary["plugins_failed"].append(name)
+
+
+# ---------------------------------------------------------------------------
+# Local plugin registration (local-clone-wins)
+# ---------------------------------------------------------------------------
+
+
+def _plugin_slug(source: str) -> str:
+    """Convert a plugin source like ``owner/repo`` to the installed-plugins slug."""
+    return source.replace("/", "--")
+
+
+def link_local_plugins(
+    ui,
+    plugins: list[dict],
+    local_clone_map: dict[str, Path],
+    config_json_path: Path,
+    summary: dict,
+) -> None:
+    """Register local plugin clones so Copilot CLI sees them as installed plugins.
+
+    For each local clone, creates a directory junction in
+    ``~/.copilot/installed-plugins/_direct/<slug>/`` and registers the plugin
+    in ``config.json``'s ``installed_plugins`` array.  This gives the full
+    plugin experience (skills, agents, MCP servers, hooks) from a local
+    source checkout — edits to the clone are reflected immediately.
+    """
+    installed_plugins_dir = config_json_path.parent / "installed-plugins" / "_direct"
+    installed_plugins_dir.mkdir(parents=True, exist_ok=True)
+
+    # Read config.json once
+    try:
+        config_obj = json.loads(config_json_path.read_text("utf-8")) if config_json_path.exists() else {}
+    except (json.JSONDecodeError, OSError):
+        config_obj = {}
+    registered: list[dict] = config_obj.get("installed_plugins", [])
+    registered_names = {p["name"] for p in registered}
+    config_dirty = False
+
+    for plugin in plugins:
+        name = plugin["name"]
+        if name not in local_clone_map:
+            continue
+
+        clone_path = local_clone_map[name]
+        source = plugin["source"]
+        slug = _plugin_slug(source)
+        junction_path = installed_plugins_dir / slug
+
+        # Read version from local plugin.json
+        version = "0.0.0"
+        plugin_json_path = clone_path / "plugin.json"
+        if plugin_json_path.exists():
+            try:
+                meta = json.loads(plugin_json_path.read_text("utf-8"))
+                version = meta.get("version", version)
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        # ── Junction ──────────────────────────────────────────────────
+        result = create_dir_link(junction_path, clone_path, interactive=False)
+        if result == "created":
+            ui.item(name, "created", f"plugin junction → {clone_path}")
+        elif result == "exists":
+            ui.item(name, "exists", "plugin junction OK")
+        else:
+            ui.item(name, "failed", f"could not create plugin junction → {clone_path}")
+            continue
+
+        # ── config.json registration ──────────────────────────────────
+        if name not in registered_names:
+            from datetime import datetime, timezone
+
+            registered.append({
+                "name": name,
+                "marketplace": "",
+                "version": version,
+                "installed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "enabled": True,
+                "cache_path": str(junction_path),
+                "source": {"source": "github", "repo": source},
+            })
+            registered_names.add(name)
+            config_dirty = True
+            ui.item(name, "created", f"registered as plugin (v{version})")
+        else:
+            ui.item(name, "exists", "already registered in config.json")
+
+    if config_dirty:
+        config_obj["installed_plugins"] = registered
+        config_json_path.write_text(json.dumps(config_obj, indent=2) + "\n", "utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -303,6 +396,8 @@ def _run_copilot(args: list[str], *, check: bool = True) -> str | None:
             text=True,
             check=check,
         )
+        if not check and proc.returncode != 0:
+            return None
         return proc.stdout
     except (subprocess.CalledProcessError, FileNotFoundError, OSError):
         return None
