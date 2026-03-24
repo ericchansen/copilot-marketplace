@@ -201,7 +201,15 @@ def link_local_plugins(
     except (json.JSONDecodeError, OSError):
         config_obj = {}
     registered: list[dict] = config_obj.get("installed_plugins", [])
-    registered_names = {p["name"] for p in registered}
+    if not isinstance(registered, list):
+        registered = []
+    registered_names = {
+        name
+        for p in registered
+        if isinstance(p, dict)
+        for name in [p.get("name")]
+        if name is not None
+    }
     config_dirty = False
 
     for plugin in plugins:
@@ -230,6 +238,14 @@ def link_local_plugins(
             ui.item(name, "created", f"plugin junction → {clone_path}")
         elif result == "exists":
             ui.item(name, "exists", "plugin junction OK")
+        elif result == "skipped":
+            ui.item(
+                name,
+                "skipped",
+                f"plugin junction path exists as real directory: {junction_path} "
+                "— remove or replace to relink",
+            )
+            continue
         else:
             ui.item(name, "failed", f"could not create plugin junction → {clone_path}")
             continue
