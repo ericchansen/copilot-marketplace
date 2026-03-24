@@ -226,7 +226,8 @@ def run_optional_deps(ui, lsp_json_path: Path, lsp_config_path: Path, summary: d
         if ans:
             ui.print_msg("Installing Playwright Edge driver…", "info")
             r = subprocess.run(["npx", "playwright", "install", "msedge"],
-                               capture_output=True, text=True, shell=_SHELL)
+                               capture_output=True, text=True, shell=_SHELL,
+                               encoding="utf-8", errors="replace")
             if r.returncode == 0:
                 ui.print_msg("Playwright Edge driver installed", "success")
                 summary["optional_installed"].append("playwright-edge")

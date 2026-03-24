@@ -13,11 +13,7 @@
       "category": "base",
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
-      "tools": ["query-docs", "resolve-library-id"],
-      "headers": {
-        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
-      },
-      "envVars": ["CONTEXT7_API_KEY"]
+      "tools": ["query-docs", "resolve-library-id"]
     },
     {
       "name": "microsoft-learn",

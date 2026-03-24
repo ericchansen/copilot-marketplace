@@ -17,7 +17,6 @@ import argparse
 import json
 import os
 import sys
-import time
 from pathlib import Path
 
 # Ensure UTF-8 output on Windows (avoids cp1252 UnicodeEncodeError with box-drawing chars)
@@ -31,28 +30,25 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from lib.ui import UI
-from lib.platform_ops import (
+from lib.ui import UI  # noqa: E402
+from lib.platform_ops import (  # noqa: E402
     home_dir,
-    create_dir_link,
     create_file_link,
-    is_link,
-    get_link_target,
-    remove_link,
     ensure_dir,
 )
-from lib.config import patch_config_json, generate_mcp_config, generate_lsp_config
-from lib.git_helpers import detect_git_auth, clone_or_pull
-from lib.skills import (
+from lib.config import patch_config_json, generate_mcp_config, generate_lsp_config  # noqa: E402
+from lib.git_helpers import detect_git_auth, clone_or_pull  # noqa: E402
+from lib.skills import (  # noqa: E402
     get_skill_folders,
     link_skills,
     legacy_cleanup,
     install_plugins,
+    link_local_plugins,
     update_plugins,
     cleanup_stale,
 )
-from lib.backup import backup_copilot_home
-from lib.optional_deps import run_optional_deps
+from lib.backup import backup_copilot_home  # noqa: E402
+from lib.optional_deps import run_optional_deps  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -69,7 +65,6 @@ PORTABLE_ALLOWED_KEYS = [
 ]
 
 PLUGINS = [
-    {"name": "aifmt", "source": "ericchansen/aifmt", "localServerName": "aifmt"},
     {"name": "msx-mcp", "source": "mcaps-microsoft/MSX-MCP", "work": True, "localServerName": "msx-mcp"},
 ]
 
@@ -91,7 +86,7 @@ STEP_NAMES = [
     "Cleanup · Stale Symlinks",
 ]
 
-LEGACY_PATTERNS = ["anthropic-skills", "awesome-copilot", "msx-mcp", "MSX-MCP", "SPT-IQ"]
+LEGACY_PATTERNS = ["anthropic-skills", "awesome-copilot", "SPT-IQ"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -313,7 +308,7 @@ def _run_setup(args: argparse.Namespace) -> None:
         mcp_data_pre = json.loads(mcp_servers_json.read_text("utf-8")) if mcp_servers_json.exists() else {"servers": []}
     except json.JSONDecodeError:
         mcp_data_pre = {"servers": []}
-    local_clone_names: set[str] = set()
+    local_clone_map: dict[str, Path] = {}
     for plugin in plugins_to_install:
         local_name = plugin.get("localServerName")
         if not local_name:
@@ -330,10 +325,14 @@ def _run_setup(args: argparse.Namespace) -> None:
                 and (candidate / ".git").is_dir()
                 and (not entry_point or (candidate / entry_point).exists())
             ):
-                local_clone_names.add(plugin["name"])
+                local_clone_map[plugin["name"]] = candidate
                 break
 
-    install_plugins(ui, plugins_to_install, local_clone_names, summary)
+    install_plugins(ui, plugins_to_install, local_clone_map, summary)
+
+    # Register local clones as full plugins (junction + config.json)
+    if local_clone_map:
+        link_local_plugins(ui, plugins_to_install, local_clone_map, config_json_path, summary)
     ui.end_step()
 
     # ── Step 10: Plugins · Update ────────────────────────────────────────
@@ -349,6 +348,11 @@ def _run_setup(args: argparse.Namespace) -> None:
     mcp_data = json.loads(mcp_servers_json.read_text("utf-8")) if mcp_servers_json.exists() else {"servers": []}
     enabled_servers = [s for s in mcp_data["servers"] if s.get("category", "base") in enabled_categories]
 
+    # Servers with pluginFallback are managed by the plugin system — their
+    # .mcp.json provides the MCP config, so we exclude them from mcp-config.json.
+    # We only build them when a local clone exists (junction-plugin needs built code).
+    plugin_managed_names = {s["name"] for s in enabled_servers if s.get("pluginFallback")}
+
     # Load .mcp-paths.json
     mcp_paths_file = REPO_ROOT / ".mcp-paths.json"
     mcp_paths: dict = json.loads(mcp_paths_file.read_text("utf-8")) if mcp_paths_file.exists() else {}
@@ -361,11 +365,18 @@ def _run_setup(args: argparse.Namespace) -> None:
         if abort_clones:
             break
 
+        server_name = server["name"]
+
+        # Plugin-managed server without local clone → plugin handles everything
+        if server_name in plugin_managed_names and server_name not in local_clone_map:
+            ui.item(server_name, "info", "handled by plugin — skipping build")
+            continue
+
         resolved_path = None
-        stored = mcp_paths.get(server["name"])
+        stored = mcp_paths.get(server_name)
         if stored and Path(stored).exists():
             resolved_path = stored
-            ui.item(server["name"], "info", f"using stored path: {resolved_path}")
+            ui.item(server_name, "info", f"using stored path: {resolved_path}")
         else:
             # Auto-detect
             detected = None
@@ -381,7 +392,7 @@ def _run_setup(args: argparse.Namespace) -> None:
 
             if not args.non_interactive:
                 suggestion = detected or str((external_dir / server.get("cloneDir", server["name"])).resolve())
-                user_input = ui.prompt(f"Path to {server['name']} repo", default=suggestion)
+                user_input = ui.prompt(f"Path to {server_name} repo", default=suggestion)
                 resolved_path = str(Path(os.path.expanduser(user_input)).resolve()) if user_input else suggestion
             else:
                 resolved_path = detected or str((external_dir / server.get("cloneDir", server["name"])).resolve())
@@ -390,7 +401,7 @@ def _run_setup(args: argparse.Namespace) -> None:
             result, effective_path = clone_or_pull(
                 server.get("repo", ""),
                 resolved_path,
-                server["name"],
+                server_name,
                 auth_state,
                 args.non_interactive,
                 ui,
@@ -400,27 +411,29 @@ def _run_setup(args: argparse.Namespace) -> None:
                 abort_clones = True
                 break
             if result in ("skipped", "clone-failed", "identity-check-failed"):
-                summary["mcp_servers_failed"].append(server["name"])
+                summary["mcp_servers_failed"].append(server_name)
                 continue
 
-        mcp_paths[server["name"]] = resolved_path
+        mcp_paths[server_name] = resolved_path
 
         # Build
         if server.get("build"):
-            ui.item(server["name"], "info", "building…")
+            ui.item(server_name, "info", "building…")
             build_ok = True
             for cmd in server["build"]:
                 import subprocess
-                r = subprocess.run(cmd, shell=True, cwd=resolved_path, capture_output=True, text=True)
+
+                r = subprocess.run(cmd, shell=True, cwd=resolved_path,
+                                   capture_output=True, text=True, encoding="utf-8", errors="replace")
                 if r.returncode != 0:
-                    ui.item(server["name"], "failed", f"'{cmd}' failed (exit {r.returncode})")
+                    ui.item(server_name, "failed", f"'{cmd}' failed (exit {r.returncode})")
                     build_ok = False
                     break
             if build_ok:
-                ui.item(server["name"], "success", "built")
-                summary["mcp_servers_built"].append(server["name"])
+                ui.item(server_name, "success", "built")
+                summary["mcp_servers_built"].append(server_name)
             else:
-                summary["mcp_servers_failed"].append(server["name"])
+                summary["mcp_servers_failed"].append(server_name)
                 failed_servers.append(server)
 
     # Remove failed builds after iteration completes (safe; avoids mutation during loop)
@@ -457,10 +470,15 @@ def _run_setup(args: argparse.Namespace) -> None:
     # ── Step 13: MCP · Config ────────────────────────────────────────────
     ui.step("MCP · Config")
     mcp_config_path = copilot_home / "mcp-config.json"
-    generate_mcp_config(enabled_servers, mcp_paths, external_dir, mcp_config_path)
+    # Exclude plugin-managed servers — their plugin .mcp.json provides the config
+    config_servers = [s for s in enabled_servers if s["name"] not in plugin_managed_names]
+    generate_mcp_config(config_servers, mcp_paths, external_dir, mcp_config_path)
     summary["mcp_config_generated"] = True
-    summary["mcp_server_count"] = len(enabled_servers)
-    ui.item("mcp-config.json", "success", f"{len(enabled_servers)} servers")
+    summary["mcp_server_count"] = len(config_servers)
+    ui.item("mcp-config.json", "success", f"{len(config_servers)} servers")
+    if plugin_managed_names:
+        managed = ", ".join(sorted(plugin_managed_names))
+        ui.item("Plugin-managed", "info", f"{managed} (via plugin .mcp.json)")
     ui.end_step()
 
     # ── Step 14: LSP · Config ────────────────────────────────────────────
