@@ -1,6 +1,6 @@
 ---
 name: clean
-description: 'Post-merge git cleanup — checkout main/master, pull latest, delete merged local branches, prune remote-tracking branches, verify clean working state. Use when user says "clean up", "rebased and merged", "merged, clean up", "cleanup branches", "back to main", or any variant of post-merge housekeeping.'
+description: 'Post-merge git cleanup — checkout main/master, pull latest, delete merged local branches, prune remote-tracking branches, clean up worktrees, verify clean working state. Use when user says "clean up", "rebased and merged", "merged, clean up", "cleanup branches", "back to main", or any variant of post-merge housekeeping.'
 license: MIT
 allowed-tools: Bash
 ---
@@ -16,17 +16,68 @@ When the user signals a merge is complete and wants cleanup, execute this workfl
 ```bash
 git branch --show-current
 git status --short
+git worktree list
 ```
 
 Note the current branch name — if it's not main/master, this is the branch that was just merged.
 
-### 2. Stash or warn about uncommitted changes
+**Check if we're inside a worktree:**
+
+```bash
+git rev-parse --git-common-dir 2>/dev/null
+```
+
+If the output differs from `.git`, we're in a worktree (linked checkout), not the main repo.
+
+### 2. Handle worktree cleanup
+
+If `git worktree list` shows worktrees beyond the main checkout, check whether any are on branches that have been merged.
+
+**If we're currently inside a worktree:**
+1. Identify the worktree path and branch:
+   ```bash
+   WORKTREE_PATH=$(pwd)
+   WORKTREE_BRANCH=$(git branch --show-current)
+   MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
+   ```
+2. Check if the branch has been merged (PR merged on GitHub):
+   ```bash
+   gh pr list --head "$WORKTREE_BRANCH" --state merged --json number,title --jq '.[0]'
+   ```
+3. If merged: `cd` to the main repo, then remove the worktree and branch:
+   ```bash
+   cd "$MAIN_REPO"
+   git worktree remove "$WORKTREE_PATH"
+   git branch -d "$WORKTREE_BRANCH"
+   ```
+4. Continue the rest of the workflow from the main repo.
+
+**If we're in the main repo** but worktrees exist:
+1. For each worktree (skip the main one), check if its branch was merged:
+   ```bash
+   git worktree list --porcelain | grep -E '^worktree |^branch ' | paste - - | while read wt_line br_line; do
+     wt_path=${wt_line#worktree }
+     branch=${br_line#branch refs/heads/}
+     merged=$(gh pr list --head "$branch" --state merged --json number --jq 'length')
+     if [ "$merged" -gt 0 ]; then
+       echo "MERGED: $wt_path ($branch)"
+     fi
+   done
+   ```
+2. Prompt the user before removing merged worktrees — worktrees may contain untracked files or artifacts the user wants to keep.
+3. For approved removals:
+   ```bash
+   git worktree remove <path>
+   git branch -d <branch>
+   ```
+
+### 3. Stash or warn about uncommitted changes
 
 If `git status --short` shows uncommitted changes:
 - **If on a feature branch that was merged:** warn the user that there are uncommitted changes on the merged branch and ask if they want to discard them before switching.
 - **If changes are trivial (untracked files only):** proceed.
 
-### 3. Switch to the default branch
+### 4. Switch to the default branch
 
 Detect the default branch name:
 
@@ -43,7 +94,7 @@ git pull --ff-only
 
 If `--ff-only` fails, use `git pull --rebase` and report it.
 
-### 4. Delete merged branches
+### 5. Delete merged branches
 
 Delete local branches that have been merged into the default branch:
 
@@ -57,13 +108,15 @@ On Windows (PowerShell), use:
 git branch --merged | Where-Object { $_ -notmatch '^\*' -and $_.Trim() -notmatch '^(main|master|develop)$' } | ForEach-Object { git branch -d $_.Trim() }
 ```
 
-### 5. Prune remote tracking branches
+**Note:** Branches checked out in worktrees cannot be deleted until the worktree is removed. If `git branch -d` fails with "checked out in another worktree", the worktree step above should have handled it. If not, report the stuck branch to the user.
+
+### 6. Prune remote tracking branches
 
 ```bash
 git fetch --prune
 ```
 
-### 6. Report results
+### 7. Report results
 
 Print a brief summary:
 
@@ -71,6 +124,7 @@ Print a brief summary:
 ✅ Cleaned up
   Branch: main @ <short-sha>
   Deleted: feat/my-branch, fix/other-branch (or "none")
+  Worktrees removed: ../q2mm-immutable-ff (or "none" / "n/a")
   Working tree: clean (or list remaining untracked files)
 ```
 
