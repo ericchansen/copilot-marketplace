@@ -1,0 +1,27 @@
+[project]
+name = "copilot-config"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = ["ruff"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "UP", "SIM"]
+ignore = [
+    "E402",   # module-import-not-at-top (setup.py needs sys.path first)
+    "E501",   # line too long (formatter handles)
+    "SIM102", # collapsible-if (readability)
+    "SIM105", # contextlib.suppress (readability preference)
+    "SIM108", # ternary (readability)
+    "SIM112", # capitalized env var (Windows env vars are case-sensitive)
+]

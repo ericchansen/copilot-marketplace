@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -20,6 +19,7 @@ _FILE_ATTRIBUTE_REPARSE_POINT = 0x400
 # ---------------------------------------------------------------------------
 # Path helpers
 # ---------------------------------------------------------------------------
+
 
 def home_dir() -> Path:
     """Return the user's home directory."""
@@ -56,6 +56,7 @@ def _resolve_paths_match(a: Path, b: Path) -> bool:
 # Link detection
 # ---------------------------------------------------------------------------
 
+
 def is_link(path: Path) -> bool:
     """Return True if *path* is a symlink or a Windows junction (reparse point)."""
     if path.is_symlink():
@@ -90,6 +91,7 @@ def get_link_target(path: Path) -> Path | None:
 # Link removal
 # ---------------------------------------------------------------------------
 
+
 def remove_link(path: Path) -> None:
     """Remove a symlink or junction.
 
@@ -105,6 +107,7 @@ def remove_link(path: Path) -> None:
 # ---------------------------------------------------------------------------
 # Directory links (junctions on Windows, symlinks on Unix)
 # ---------------------------------------------------------------------------
+
 
 def create_dir_link(
     link_path: Path,
@@ -129,9 +132,7 @@ def create_dir_link(
     # --- real directory exists ---
     elif link_path.is_dir():
         if interactive:
-            answer = input(
-                f"{link_path} is a real directory. Replace with junction/symlink? [y/N] "
-            )
+            answer = input(f"{link_path} is a real directory. Replace with junction/symlink? [y/N] ")
             if answer.strip().lower() != "y":
                 return "skipped"
         else:
@@ -160,6 +161,7 @@ def create_dir_link(
 # File links (symlinks, with copy fallback on Windows)
 # ---------------------------------------------------------------------------
 
+
 def create_file_link(
     link_path: Path,
     target_path: Path,
@@ -183,9 +185,7 @@ def create_file_link(
     # --- real file exists ---
     elif link_path.is_file():
         if interactive:
-            answer = input(
-                f"{link_path} is a real file. Replace with symlink? [y/N] "
-            )
+            answer = input(f"{link_path} is a real file. Replace with symlink? [y/N] ")
             if answer.strip().lower() != "y":
                 return "skipped"
         else:
@@ -237,6 +237,7 @@ def _create_file_link_windows(link_path: Path, target_path: Path) -> str:
 # ---------------------------------------------------------------------------
 # LSP binary validation
 # ---------------------------------------------------------------------------
+
 
 def validate_lsp_binary(command: str, args: list[str]) -> bool:
     """Check that an LSP server binary exists and stays alive on startup."""

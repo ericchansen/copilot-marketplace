@@ -184,11 +184,7 @@ def onedrive_backup(ui, skip_session: bool = False) -> dict:
 
             # Prune old snapshots — keep last 10
             snapshots = sorted(
-                (
-                    f
-                    for f in snap_dir.iterdir()
-                    if f.name.startswith("session-store-2") and f.name.endswith(".db")
-                ),
+                (f for f in snap_dir.iterdir() if f.name.startswith("session-store-2") and f.name.endswith(".db")),
                 key=lambda f: f.name,
                 reverse=True,
             )

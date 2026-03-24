@@ -11,13 +11,13 @@ Usage:
     python setup.py --non-interactive
     python setup.py --clean-orphans
 """
+
 from __future__ import annotations
 
 import argparse
 import json
 import os
 import sys
-import time
 from pathlib import Path
 
 # Ensure UTF-8 output on Windows (avoids cp1252 UnicodeEncodeError with box-drawing chars)
@@ -34,11 +34,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from lib.ui import UI
 from lib.platform_ops import (
     home_dir,
-    create_dir_link,
     create_file_link,
-    is_link,
-    get_link_target,
-    remove_link,
     ensure_dir,
 )
 from lib.config import patch_config_json, generate_mcp_config, generate_lsp_config
@@ -65,7 +61,12 @@ CONFIG_FILE_LINKS = [
 ]
 
 PORTABLE_ALLOWED_KEYS = [
-    "banner", "model", "render_markdown", "theme", "experimental", "reasoning_effort",
+    "banner",
+    "model",
+    "render_markdown",
+    "theme",
+    "experimental",
+    "reasoning_effort",
 ]
 
 PLUGINS = [
@@ -134,6 +135,7 @@ def main() -> None:
 
     if cmd == "backup":
         from lib.backup import onedrive_backup
+
         ui = UI(["Backup · Config Files", "Backup · Session Store"])
         ui.header("💾  Copilot Config Backup")
         onedrive_backup(ui, skip_session=args.skip_session)
@@ -141,6 +143,7 @@ def main() -> None:
 
     if cmd == "restore":
         from lib.restore import run_restore
+
         ui = UI(["Scan Symlinks", "Restore from Backup"])
         ui.header("🔄  Copilot Config Restore")
         run_restore(ui, REPO_ROOT, non_interactive=args.non_interactive)
@@ -148,6 +151,7 @@ def main() -> None:
 
     if cmd == "sync-skills":
         from lib.skills import sync_untracked_skills
+
         repo_skills = REPO_ROOT / COPILOT_DIR / SKILLS_DIR
         copilot_skills = home_dir() / ".copilot" / "skills"
         ui = UI(["Scan Skills", "Adopt Skills"])
@@ -157,6 +161,8 @@ def main() -> None:
 
     # Default: full setup
     _run_setup(args)
+
+
 def _run_setup(args: argparse.Namespace) -> None:
     """Run the full setup flow."""
     ui = UI(STEP_NAMES)
@@ -411,6 +417,7 @@ def _run_setup(args: argparse.Namespace) -> None:
             build_ok = True
             for cmd in server["build"]:
                 import subprocess
+
                 r = subprocess.run(cmd, shell=True, cwd=resolved_path, capture_output=True, text=True)
                 if r.returncode != 0:
                     ui.item(server["name"], "failed", f"'{cmd}' failed (exit {r.returncode})")
@@ -476,8 +483,14 @@ def _run_setup(args: argparse.Namespace) -> None:
     ui.step("Cleanup · Stale Symlinks")
     linked_names = {s["name"] for s in local_skills}
     cleanup_stale(
-        ui, copilot_skills, linked_names, REPO_ROOT, external_dir,
-        include_clean_orphans, args.clean_orphans or args.non_interactive, summary,
+        ui,
+        copilot_skills,
+        linked_names,
+        REPO_ROOT,
+        external_dir,
+        include_clean_orphans,
+        args.clean_orphans or args.non_interactive,
+        summary,
     )
     ui.end_step()
 

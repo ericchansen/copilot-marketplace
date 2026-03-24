@@ -18,6 +18,7 @@ _EXTERNAL_PATHS_LEGACY_KEYS = ("anthropic", "github", "msx-mcp", "spt-iq")
 # Skill discovery
 # ---------------------------------------------------------------------------
 
+
 def get_skill_folders(base_path: Path) -> list[dict]:
     """Return skill folder objects from *base_path*.
 
@@ -38,6 +39,7 @@ def get_skill_folders(base_path: Path) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Skill linking
 # ---------------------------------------------------------------------------
+
 
 def link_skills(
     ui,
@@ -71,6 +73,7 @@ def link_skills(
 # ---------------------------------------------------------------------------
 # Legacy junction cleanup
 # ---------------------------------------------------------------------------
+
 
 def legacy_cleanup(
     ui,
@@ -127,6 +130,7 @@ def legacy_cleanup(
 # ---------------------------------------------------------------------------
 # Plugin install
 # ---------------------------------------------------------------------------
+
 
 def install_plugins(ui, plugins: list[dict], local_clone_names: set[str], summary: dict) -> None:
     """Install Copilot CLI plugins that are not yet present.
@@ -213,6 +217,7 @@ def update_plugins(ui, summary: dict) -> None:
 # Stale symlink / orphan cleanup
 # ---------------------------------------------------------------------------
 
+
 def cleanup_stale(
     ui,
     copilot_skills: Path,
@@ -255,10 +260,7 @@ def cleanup_stale(
                 target_path = Path(target).resolve()
                 repo_root_path = Path(repo_root).resolve()
                 external_dir_path = Path(external_dir).resolve()
-                if (
-                    target_path.is_relative_to(repo_root_path)
-                    or target_path.is_relative_to(external_dir_path)
-                ):
+                if target_path.is_relative_to(repo_root_path) or target_path.is_relative_to(external_dir_path):
                     should_remove = True
 
         if not should_remove:
@@ -267,7 +269,7 @@ def cleanup_stale(
         # Prompt unless auto-removing
         if not remove_all:
             answer = ui.prompt(f"Remove orphan skill '{name}'? (Y/n/a)")
-            choice = (answer.strip().lower() or "y")  # default Y on Enter
+            choice = answer.strip().lower() or "y"  # default Y on Enter
             if choice == "a":
                 remove_all = True
             elif choice == "n":
@@ -294,6 +296,7 @@ def cleanup_stale(
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _run_copilot(args: list[str], *, check: bool = True) -> str | None:
     """Run a ``copilot`` CLI sub-command and return stdout, or None on failure."""
     try:
@@ -312,6 +315,7 @@ def _run_copilot(args: list[str], *, check: bool = True) -> str | None:
 # Untracked skill sync (replaces sync-skills.ps1)
 # ---------------------------------------------------------------------------
 
+
 def _parse_skill_description(skill_md: Path) -> str:
     """Extract the ``description`` field from SKILL.md YAML frontmatter."""
     try:
@@ -328,7 +332,7 @@ def _parse_skill_description(skill_md: Path) -> str:
             in_frontmatter = True
             continue
         if in_frontmatter and stripped.lower().startswith("description:"):
-            desc = stripped[len("description:"):].strip()
+            desc = stripped[len("description:") :].strip()
             # Strip surrounding quotes
             if len(desc) >= 2 and desc[0] in ("'", '"') and desc[-1] == desc[0]:
                 desc = desc[1:-1]

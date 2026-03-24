@@ -40,6 +40,7 @@ def patch_config_json(
 # MCP config generation
 # ---------------------------------------------------------------------------
 
+
 def _build_mcp_entry(server: dict, mcp_paths: dict, external_dir: Path) -> dict:
     """Build a single mcpServers entry from a source server definition."""
     server_type = server["type"]
@@ -99,6 +100,7 @@ def generate_mcp_config(
 # ---------------------------------------------------------------------------
 # LSP config generation
 # ---------------------------------------------------------------------------
+
 
 def generate_lsp_config(
     lsp_json_path: Path,

@@ -1,13 +1,16 @@
 """Optional dependency installs — LSP servers, MarkItDown, QMD, Playwright."""
+
 from __future__ import annotations
 
 import os
-import platform
 import shutil
 import subprocess
 from pathlib import Path
 
-_SHELL = platform.system() == "Windows"
+
+def _resolve(cmd: str) -> str:
+    """Resolve a command name to its full path, handling .cmd/.bat wrappers on Windows."""
+    return shutil.which(cmd) or cmd
 
 
 def _npm_needs_admin() -> bool:
@@ -16,7 +19,7 @@ def _npm_needs_admin() -> bool:
     if not npm:
         return False
     try:
-        r = subprocess.run(["npm", "config", "get", "prefix"], capture_output=True, text=True, shell=_SHELL)
+        r = subprocess.run([_resolve("npm"), "config", "get", "prefix"], capture_output=True, text=True)
         prefix = r.stdout.strip()
         if prefix and Path(prefix).exists():
             test = Path(prefix) / ".copilot-write-test"
@@ -36,17 +39,19 @@ def _npm_install_global(packages: list[str], ui) -> bool:
     needs_admin = _npm_needs_admin()
     if needs_admin and os.name == "nt":
         import ctypes
+
         is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
         if not is_admin:
             ui.print_msg("Node is installed system-wide — global npm installs need Administrator", "warn")
             ui.print_msg("Re-run as Administrator, or use nvm-windows for user-scoped Node.", "info")
             return False
-    r = subprocess.run(["npm", "install", "-g"] + packages, capture_output=True, text=True, shell=_SHELL)
+    r = subprocess.run([_resolve("npm"), "install", "-g"] + packages, capture_output=True, text=True)
     return r.returncode == 0
 
 
 def _validate_lsp(command: str, args: list[str]) -> bool:
     from lib.platform_ops import validate_lsp_binary
+
     return validate_lsp_binary(command, args)
 
 
@@ -129,8 +134,9 @@ def run_optional_deps(ui, lsp_json_path: Path, lsp_config_path: Path, summary: d
             ans = ui.confirm("Install rust-analyzer?", default=True)
             if ans:
                 ui.print_msg("Installing rust-analyzer via rustup…", "info")
-                r = subprocess.run(["rustup", "component", "add", "rust-analyzer"],
-                                   capture_output=True, text=True, shell=_SHELL)
+                r = subprocess.run(
+                    [_resolve("rustup"), "component", "add", "rust-analyzer"], capture_output=True, text=True
+                )
                 if r.returncode == 0:
                     ui.print_msg("rust-analyzer installed", "success")
                     summary["optional_installed"].append("rust-analyzer")
@@ -167,7 +173,7 @@ def run_optional_deps(ui, lsp_json_path: Path, lsp_config_path: Path, summary: d
         node_path = shutil.which("node")
         if node_path:
             try:
-                r = subprocess.run(["node", "--version"], capture_output=True, text=True)
+                r = subprocess.run([_resolve("node"), "--version"], capture_output=True, text=True)
                 ver = r.stdout.strip().lstrip("v")
                 major = int(ver.split(".")[0])
                 if major >= 22:
@@ -178,8 +184,9 @@ def run_optional_deps(ui, lsp_json_path: Path, lsp_config_path: Path, summary: d
             node_ver_str = "not found"
             if node_path:
                 try:
-                    node_ver_str = subprocess.run(["node", "--version"],
-                                                  capture_output=True, text=True).stdout.strip()
+                    node_ver_str = subprocess.run(
+                        [_resolve("node"), "--version"], capture_output=True, text=True
+                    ).stdout.strip()
                 except Exception:
                     pass
             ui.print_msg(f"QMD requires Node.js 22+ (current: {node_ver_str})", "warn")
@@ -224,8 +231,7 @@ def run_optional_deps(ui, lsp_json_path: Path, lsp_config_path: Path, summary: d
         ans = ui.confirm("Install Playwright Edge driver?")
         if ans:
             ui.print_msg("Installing Playwright Edge driver…", "info")
-            r = subprocess.run(["npx", "playwright", "install", "msedge"],
-                               capture_output=True, text=True, shell=_SHELL)
+            r = subprocess.run([_resolve("npx"), "playwright", "install", "msedge"], capture_output=True, text=True)
             if r.returncode == 0:
                 ui.print_msg("Playwright Edge driver installed", "success")
                 summary["optional_installed"].append("playwright-edge")
@@ -240,6 +246,7 @@ def run_optional_deps(ui, lsp_json_path: Path, lsp_config_path: Path, summary: d
     lsp_items = {"typescript-language-server", "pyright-langserver", "rust-analyzer"}
     if lsp_installed_any and any(i in lsp_items for i in summary["optional_installed"]):
         from lib.config import generate_lsp_config
+
         count, skipped = generate_lsp_config(lsp_json_path, lsp_config_path, ui)
         summary["lsp_count"] = count
         summary["lsp_skipped"] = skipped
@@ -257,8 +264,7 @@ def _install_markitdown(ui, summary: dict) -> None:
         ans = ui.confirm("Install pipx? (pip install --user pipx)", default=True)
         if ans:
             ui.print_msg("Installing pipx…", "info")
-            r = subprocess.run(["pip", "install", "--user", "pipx"],
-                               capture_output=True, text=True)
+            r = subprocess.run([_resolve("pip"), "install", "--user", "pipx"], capture_output=True, text=True)
             if r.returncode == 0:
                 ui.print_msg("pipx installed", "success")
                 pipx_cmd = "python -m pipx"
@@ -268,9 +274,9 @@ def _install_markitdown(ui, summary: dict) -> None:
     if pipx_cmd:
         ui.print_msg("Installing markitdown[all] via pipx…", "info")
         if pipx_cmd == "pipx":
-            cmd = ["pipx", "install", "markitdown[all]"]
+            cmd = [_resolve("pipx"), "install", "markitdown[all]"]
         else:
-            cmd = ["python", "-m", "pipx", "install", "markitdown[all]"]
+            cmd = [_resolve("python"), "-m", "pipx", "install", "markitdown[all]"]
         r = subprocess.run(cmd, capture_output=True, text=True)
         if r.returncode == 0:
             if not shutil.which("markitdown"):
@@ -284,8 +290,7 @@ def _install_markitdown(ui, summary: dict) -> None:
             summary["optional_failed"].append("markitdown")
     elif shutil.which("pip"):
         ui.print_msg("Installing markitdown[all] via pip…", "info")
-        r = subprocess.run(["pip", "install", "markitdown[all]"],
-                           capture_output=True, text=True)
+        r = subprocess.run([_resolve("pip"), "install", "markitdown[all]"], capture_output=True, text=True)
         if r.returncode == 0:
             ui.print_msg("MarkItDown installed", "success")
             summary["optional_installed"].append("markitdown")
