@@ -23,5 +23,5 @@ ignore = [
     "SIM102", # collapsible-if (readability)
     "SIM105", # contextlib.suppress (readability preference)
     "SIM108", # ternary (readability)
-    "SIM112", # capitalized env var (Windows env vars are case-sensitive)
+    "SIM112", # capitalized env var (Windows env vars are case-insensitive but commonly mixed-case; rule too noisy)
 ]

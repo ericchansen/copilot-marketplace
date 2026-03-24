@@ -33,6 +33,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from lib.ui import UI
 from lib.platform_ops import (
+    IS_WINDOWS,
     home_dir,
     create_file_link,
     ensure_dir,
@@ -416,9 +417,13 @@ def _run_setup(args: argparse.Namespace) -> None:
             ui.item(server["name"], "info", "building…")
             build_ok = True
             for cmd in server["build"]:
+                import shlex
                 import subprocess
 
-                r = subprocess.run(cmd, shell=True, cwd=resolved_path, capture_output=True, text=True)
+                if IS_WINDOWS:
+                    r = subprocess.run(cmd, shell=True, cwd=resolved_path, capture_output=True, text=True)
+                else:
+                    r = subprocess.run(shlex.split(cmd), cwd=resolved_path, capture_output=True, text=True)
                 if r.returncode != 0:
                     ui.item(server["name"], "failed", f"'{cmd}' failed (exit {r.returncode})")
                     build_ok = False
