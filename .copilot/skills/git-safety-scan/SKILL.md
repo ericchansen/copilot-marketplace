@@ -136,7 +136,7 @@ Lines starting with `#` are comments. One term per line, case-insensitive matchi
 ## Critical Rules
 
 1. **NEVER push if high-risk patterns are found** — no exceptions
-2. **If the scan is CLEAN (no findings at any level), proceed immediately** — do not ask the user for confirmation. The scan already verified safety; asking "OK to push?" adds friction with zero value. Just push.
+2. **If the scan is CLEAN (no findings at any level), proceed immediately** — do not ask the user for confirmation or show a diff preview. The scan already verified safety. Just push.
 3. **Only stop and ask when there are actual findings** — medium-risk or heuristic matches require user review and explicit confirmation before proceeding.
 4. **If in doubt, STOP and ask** — false positives are better than leaks
 5. **This skill cannot be skipped** — it's mandatory for all pushes

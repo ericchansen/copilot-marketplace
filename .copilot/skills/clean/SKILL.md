@@ -34,17 +34,17 @@ If the output differs from `.git`, we're in a worktree (linked checkout), not th
 If `git worktree list` shows worktrees beyond the main checkout, check whether any are on branches that have been merged.
 
 **If we're currently inside a worktree:**
-1. Identify the worktree path and branch:
+1. Identify the worktree root path, branch, and main repo:
    ```bash
-   WORKTREE_PATH=$(pwd)
+   WORKTREE_PATH=$(git rev-parse --show-toplevel)
    WORKTREE_BRANCH=$(git branch --show-current)
-   MAIN_REPO=$(git worktree list | head -1 | awk '{print $1}')
+   MAIN_REPO=$(cd "$(git rev-parse --git-common-dir)/.." && pwd)
    ```
 2. Check if the branch has been merged (PR merged on GitHub):
    ```bash
    gh pr list --head "$WORKTREE_BRANCH" --state merged --json number,title --jq '.[0]'
    ```
-3. If merged: `cd` to the main repo, then remove the worktree and branch:
+3. If merged: check for uncommitted/untracked files first. If the worktree is dirty, warn the user and ask before proceeding. Then `cd` to the main repo and remove the worktree and branch:
    ```bash
    cd "$MAIN_REPO"
    git worktree remove "$WORKTREE_PATH"
@@ -53,10 +53,12 @@ If `git worktree list` shows worktrees beyond the main checkout, check whether a
 4. Continue the rest of the workflow from the main repo.
 
 **If we're in the main repo** but worktrees exist:
-1. For each worktree (skip the main one), check if its branch was merged:
+1. For each worktree (skip the main one and any in detached HEAD state), check if its branch was merged:
    ```bash
+   MAIN_ROOT=$(git rev-parse --show-toplevel)
    git worktree list --porcelain | grep -E '^worktree |^branch ' | paste - - | while read wt_line br_line; do
      wt_path=${wt_line#worktree }
+     [ "$wt_path" = "$MAIN_ROOT" ] && continue
      branch=${br_line#branch refs/heads/}
      merged=$(gh pr list --head "$branch" --state merged --json number --jq 'length')
      if [ "$merged" -gt 0 ]; then
@@ -130,7 +132,7 @@ Print a brief summary:
 
 Keep the output tight — this is a routine operation.
 
-### 7. Suggest next steps
+### 8. Suggest next steps
 
 After cleanup, briefly surface what's actionable. Check these sources (in parallel when possible):
 
