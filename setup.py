@@ -351,7 +351,13 @@ def _run_setup(args: argparse.Namespace) -> None:
     # Servers with pluginFallback are managed by the plugin system — their
     # .mcp.json provides the MCP config, so we exclude them from mcp-config.json.
     # We only build them when a local clone exists (junction-plugin needs built code).
-    plugin_managed_names = {s["name"] for s in enabled_servers if s.get("pluginFallback")}
+    # Only count a server as plugin-managed when its plugin is actually being installed;
+    # a pluginFallback on a server whose plugin isn't in PLUGINS is dormant.
+    plugin_server_names = {p["localServerName"] for p in plugins_to_install if p.get("localServerName")}
+    plugin_managed_names = {
+        s["name"] for s in enabled_servers
+        if s.get("pluginFallback") and s["name"] in plugin_server_names
+    }
 
     # Load .mcp-paths.json
     mcp_paths_file = REPO_ROOT / ".mcp-paths.json"
