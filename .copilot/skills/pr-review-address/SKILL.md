@@ -7,6 +7,13 @@ allowed-tools: Bash
 
 # Address PR Review Feedback
 
+## Invocation
+
+This skill can be invoked in two ways:
+
+1. **Automatically** — by the `pr-copilot-review` skill after it detects a Copilot review on a newly created PR. In this case, skip Step 1 (the PR number and review data are already known).
+2. **Manually** — when the user asks to address PR feedback (e.g., "address PR comments", "fix PR review").
+
 When the user asks to address, review, fix, or respond to PR feedback, execute this complete workflow. Do NOT just fix things blindly — exercise engineering judgment on every comment.
 
 ## Step 1: Gather All Feedback

@@ -191,6 +191,12 @@ gh pr edit 42 --body "Updated `config.ts`"
 
 **Prefer single-quoted `@'...'@`** — it treats everything as literal text, which is what you want for markdown. Only use `@"..."@` when you need to embed PowerShell variables (and in that case, escape backticks as ` `` `).
 
+## After PR Creation — Auto-Review Chain
+
+After `gh pr create` succeeds, **automatically invoke the `pr-copilot-review` skill**. That skill polls for Copilot automated reviews and addresses them via `pr-review-address`. Do NOT wait for the user to ask.
+
+This does NOT apply to `gh pr edit`, `gh issue create`, or `gh issue edit`.
+
 ## Checklist
 
 - [ ] Active GitHub account matches the target repo (`gh auth status`)
@@ -198,3 +204,4 @@ gh pr edit 42 --body "Updated `config.ts`"
 - [ ] Used `--body-file`, NOT `--body`
 - [ ] Temp file cleaned up after command completes
 - [ ] PR title follows conventional commit format: `<type>[scope]: <description>`
+- [ ] (PR create only) Invoked `pr-copilot-review` skill after creation
