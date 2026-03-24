@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import os
+import platform
 import shutil
 import subprocess
 from pathlib import Path
+
+_SHELL = platform.system() == "Windows"
 
 
 def _npm_needs_admin() -> bool:
@@ -13,7 +16,7 @@ def _npm_needs_admin() -> bool:
     if not npm:
         return False
     try:
-        r = subprocess.run(["npm", "config", "get", "prefix"], capture_output=True, text=True)
+        r = subprocess.run(["npm", "config", "get", "prefix"], capture_output=True, text=True, shell=_SHELL)
         prefix = r.stdout.strip()
         if prefix and Path(prefix).exists():
             test = Path(prefix) / ".copilot-write-test"
@@ -38,7 +41,7 @@ def _npm_install_global(packages: list[str], ui) -> bool:
             ui.print_msg("Node is installed system-wide — global npm installs need Administrator", "warn")
             ui.print_msg("Re-run as Administrator, or use nvm-windows for user-scoped Node.", "info")
             return False
-    r = subprocess.run(["npm", "install", "-g"] + packages, capture_output=True, text=True)
+    r = subprocess.run(["npm", "install", "-g"] + packages, capture_output=True, text=True, shell=_SHELL)
     return r.returncode == 0
 
 
@@ -127,7 +130,7 @@ def run_optional_deps(ui, lsp_json_path: Path, lsp_config_path: Path, summary: d
             if ans:
                 ui.print_msg("Installing rust-analyzer via rustup…", "info")
                 r = subprocess.run(["rustup", "component", "add", "rust-analyzer"],
-                                   capture_output=True, text=True)
+                                   capture_output=True, text=True, shell=_SHELL)
                 if r.returncode == 0:
                     ui.print_msg("rust-analyzer installed", "success")
                     summary["optional_installed"].append("rust-analyzer")
@@ -222,7 +225,7 @@ def run_optional_deps(ui, lsp_json_path: Path, lsp_config_path: Path, summary: d
         if ans:
             ui.print_msg("Installing Playwright Edge driver…", "info")
             r = subprocess.run(["npx", "playwright", "install", "msedge"],
-                               capture_output=True, text=True)
+                               capture_output=True, text=True, shell=_SHELL)
             if r.returncode == 0:
                 ui.print_msg("Playwright Edge driver installed", "success")
                 summary["optional_installed"].append("playwright-edge")
