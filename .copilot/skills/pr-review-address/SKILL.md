@@ -49,10 +49,12 @@ For 🟢 Style/preference items:
 
 ## Step 4: Reply to Every Comment
 
-**Every review comment gets a reply.** Never leave feedback unacknowledged.
+**Every piece of feedback (review threads + general PR comments) gets a reply.** Never leave feedback unacknowledged.
 
-**CRITICAL: Reply to each thread individually using `addPullRequestReviewThreadReply`.**
-Do NOT use `gh pr comment` — that adds a general conversation comment at the bottom of the PR, not an inline reply to the review thread. Each thread must get its own reply so reviewers see responses in context.
+**CRITICAL (review threads): Reply to each review thread individually using `addPullRequestReviewThreadReply`.**
+Do NOT use `gh pr comment` when you intend to reply to a review thread — it adds a general conversation comment at the bottom of the PR, not a threaded reply. Each review thread must get its own inline reply so reviewers see responses in context.
+
+**General PR comments (conversation tab):** For comments that are NOT part of a review thread (e.g., general discussion in the Conversation tab), reply using `gh pr comment` or the `addComment` mutation — these live in the conversation tab and cannot be replied to with `addPullRequestReviewThreadReply`.
 
 ### Reply mechanism
 
@@ -72,9 +74,15 @@ gh api graphql `
 **Encoding safety rules:**
 - Always use **single-quoted strings** (`'...'`) for `-f body=` to prevent PowerShell backtick interpretation.
 - If the reply body contains single quotes, write the body to a temp file using the **`create` tool** (NOT PowerShell `Out-File`), then read it back:
-  ```powershell
+  ```
+  # First, use the create tool:
+  #   path: C:\Users\<you>\AppData\Local\Temp\reply.md
+  #   file_text: <the reply body with single quotes>
+  
+  # Then read it back in PowerShell:
   $replyBody = Get-Content "$env:TEMP\reply.md" -Raw
   gh api graphql -f query='...' -f threadId='PRRT_xxx' -f body=$replyBody
+  Remove-Item "$env:TEMP\reply.md" -ErrorAction SilentlyContinue
   ```
 - **NEVER** use double-quoted strings for bodies containing backticks — PowerShell interprets `` `n `` as newline, `` `a `` as BEL, etc.
 
@@ -151,7 +159,7 @@ After replying:
 
 ### Getting thread data
 
-Fetch all threads with their node IDs and first comment body:
+Fetch all threads with their node IDs and first comment body (handles up to 100 threads; for larger PRs, paginate using `after: endCursor`):
 ```
 gh api graphql -f query='{
   repository(owner: "OWNER", name: "REPO") {
@@ -165,12 +173,15 @@ gh api graphql -f query='{
 }'
 ```
 
+If `hasNextPage` is `true`, re-run the query adding `after: "CURSOR_VALUE"` to `reviewThreads(first: 100, after: "...")` until all threads are fetched.
+
 ### Anti-patterns
 
 ```powershell
-# ❌ NEVER — general PR comment instead of thread reply
+# ❌ NEVER — gh pr comment when replying to a review thread
 gh pr comment 53 --body "Here's what I fixed: ..."
 # This adds a comment to the conversation tab, NOT inline on the review thread
+# (gh pr comment IS correct for replying to general conversation-tab comments)
 
 # ❌ NEVER — one summary reply covering all threads
 gh pr comment 53 --body "Addressed all feedback: 1) Fixed X, 2) Fixed Y, 3) Pushed back on Z"
