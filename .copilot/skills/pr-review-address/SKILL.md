@@ -75,11 +75,13 @@ gh api graphql `
 - Always use **single-quoted strings** (`'...'`) for `-f body=` to prevent PowerShell backtick interpretation.
 - If the reply body contains single quotes, write the body to a temp file using the **`create` tool** (NOT PowerShell `Out-File`), then read it back:
   ```
-  # First, use the create tool:
-  #   path: C:\Users\<you>\AppData\Local\Temp\reply.md
-  #   file_text: <the reply body with single quotes>
+  # Step 1: Use the Copilot CLI create tool to write the file:
+  #   create tool call:
+  #     path: C:\Users\<you>\AppData\Local\Temp\reply.md
+  #     file_text: |
+  #       Fixed in abc1234. It's now safe to include single 'quotes' here.
   
-  # Then read it back in PowerShell:
+  # Step 2: Read it back in PowerShell and pass to gh api:
   $replyBody = Get-Content "$env:TEMP\reply.md" -Raw
   gh api graphql -f query='...' -f threadId='PRRT_xxx' -f body=$replyBody
   Remove-Item "$env:TEMP\reply.md" -ErrorAction SilentlyContinue
@@ -126,7 +128,7 @@ Good catch. <Why it's out of scope for this PR>. Tracked in #<issue> / will foll
 
 ### Per-thread workflow
 
-For EACH unresolved thread:
+For EACH thread that lacks a reply from you (whether resolved or unresolved):
 
 ```powershell
 # 1. Reply to the thread
