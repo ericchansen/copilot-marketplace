@@ -18,7 +18,16 @@ _PS_TEMPLATE = """\
 {block_start}
 function {alias} {{
     $configPath = Join-Path $env:USERPROFILE ".copilot" "config.json"
-    $config = Get-Content $configPath -Raw | ConvertFrom-Json
+    if (-not (Test-Path -Path $configPath -PathType Leaf)) {{
+        Write-Error "Copilot config not found at $configPath. Run: copilot plugin install {source}"
+        return
+    }}
+    try {{
+        $config = Get-Content $configPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+    }} catch {{
+        Write-Error "Failed to parse Copilot config at $configPath. Run setup again or reinstall the plugin."
+        return
+    }}
     $plugin = $config.installed_plugins | Where-Object {{ $_.name -eq "{name}" }}
     if (-not $plugin) {{
         Write-Error "{name} plugin not found. Install with: copilot plugin install {source}"
@@ -33,8 +42,21 @@ _BASH_TEMPLATE = """\
 {block_start}
 {alias}() {{
     local config_path="$HOME/.copilot/config.json"
+    if [ ! -f "$config_path" ]; then
+        echo "Error: Copilot config not found at $config_path. Run: copilot plugin install {source}" >&2
+        return 1
+    fi
+    local _py
+    for _py in python3 python py; do
+        if command -v "$_py" >/dev/null 2>&1; then break; fi
+        _py=""
+    done
+    if [ -z "$_py" ]; then
+        echo "Error: Python not found. Install Python 3.10+ to use {alias}." >&2
+        return 1
+    fi
     local plugin_path
-    plugin_path=$(python3 -c "
+    plugin_path=$("$_py" -c "
 import json, sys
 config = json.load(open('$config_path'))
 plugins = config.get('installed_plugins', [])
@@ -115,21 +137,24 @@ def _remove_alias_block(content: str, alias: str) -> str:
 
 def _append_alias(profile_path: Path, block: str) -> bool:
     """Append an alias block to a shell profile, creating it if needed."""
-    profile_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        profile_path.parent.mkdir(parents=True, exist_ok=True)
 
-    content = profile_path.read_text("utf-8") if profile_path.exists() else ""
-    # Remove old block if present (allows updates)
-    alias_match = re.search(r"function (\S+)", block) or re.search(r"^(\S+)\(\)", block, re.MULTILINE)
-    if alias_match:
-        alias_name = alias_match.group(1)
-        if _has_alias_block(content, alias_name):
-            content = _remove_alias_block(content, alias_name)
+        content = profile_path.read_text("utf-8") if profile_path.exists() else ""
+        # Remove old block if present (allows updates)
+        alias_match = re.search(r"function (\S+)", block) or re.search(r"^(\S+)\(\)", block, re.MULTILINE)
+        if alias_match:
+            alias_name = alias_match.group(1)
+            if _has_alias_block(content, alias_name):
+                content = _remove_alias_block(content, alias_name)
 
-    # Append new block
-    if not content.endswith("\n"):
-        content += "\n"
-    content += block
-    profile_path.write_text(content, "utf-8")
+        # Append new block
+        if not content.endswith("\n"):
+            content += "\n"
+        content += block
+        profile_path.write_text(content, "utf-8")
+    except OSError:
+        return False
     return True
 
 
@@ -172,16 +197,21 @@ class ShellAliasStep:
                     block = _PS_DEV_TEMPLATE.format(**fmt, clone_path=str(clone_path))
                 else:
                     block = _PS_TEMPLATE.format(**fmt)
-                _append_alias(profile, block)
-                result.item(alias, "created", f"alias added to {profile.name}")
+                if _append_alias(profile, block):
+                    result.item(alias, "created", f"alias added to {profile.name}")
+                else:
+                    result.item(alias, "failed", f"could not write to {profile}")
             else:
                 profiles = _profile_paths_unix()
                 if clone_path:
                     block = _BASH_DEV_TEMPLATE.format(**fmt, clone_path=str(clone_path))
                 else:
                     block = _BASH_TEMPLATE.format(**fmt)
-                for profile in profiles:
-                    _append_alias(profile, block)
-                result.item(alias, "created", f"alias added to {', '.join(p.name for p in profiles)}")
+                wrote = [p for p in profiles if _append_alias(p, block)]
+                failed = [p for p in profiles if p not in wrote]
+                if wrote:
+                    result.item(alias, "created", f"alias added to {', '.join(p.name for p in wrote)}")
+                if failed:
+                    result.item(alias, "failed", f"could not write to {', '.join(str(p) for p in failed)}")
 
         return result

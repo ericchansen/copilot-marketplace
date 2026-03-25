@@ -167,8 +167,15 @@ def install_plugins(ui, plugins: list[dict], local_clone_map: dict[str, Path], s
             summary["plugins_installed"].append(name)
             # Disable-by-default for alias plugins (opt-in via shell alias)
             if plugin.get("alias"):
-                _run_copilot(["plugin", "disable", name], check=False)
-                ui.print_msg(f"disabled by default — use '{plugin['alias']}' alias to opt in", "info")
+                disable_result = _run_copilot(["plugin", "disable", name], check=False)
+                if disable_result is not None:
+                    ui.print_msg(f"disabled by default — use '{plugin['alias']}' alias to opt in", "info")
+                else:
+                    ui.item(
+                        name,
+                        "warn",
+                        f"could not disable automatically — run 'copilot plugin disable {name}' if needed",
+                    )
         else:
             ui.item(name, "failed", f"install failed for {source}")
             summary["plugins_failed"].append(name)
