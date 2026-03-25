@@ -300,21 +300,31 @@ copilot plugin install example-skills@anthropic-agent-skills     # frontend-desi
 
 ### MSX-MCP
 
-For **consumers**, setup installs the plugin automatically with `--work`:
+Setup installs the MSX-MCP plugin **disabled by default** and creates a `copilot-msx` shell alias. This keeps your normal `copilot` sessions clean (no extra 39 tools / 17 skills) and lets you opt in when doing sales work:
+
 ```bash
-python setup.py --work    # installs MSX-MCP plugin + enables Power BI
+python setup.py --work    # installs plugin (disabled) + creates copilot-msx alias
 ```
 
-Or install manually:
+| Command | What you get |
+|---------|-------------|
+| `copilot` | Clean session — no MSX tools or agent |
+| `copilot-msx` | Full MSX experience — all tools, skills, `@msx` agent |
+
+The alias supports all standard flags: `copilot-msx --continue`, `copilot-msx --model claude-opus-4.6`, etc.
+
+**Manual install** (without setup):
 ```bash
 copilot plugin install mcaps-microsoft/MSX-MCP
+copilot plugin disable msx-mcp
+# Then add the copilot-msx alias to your shell profile — see MSX-MCP docs
 ```
 
-For **developers/maintainers**, clone the repo locally and setup will detect it:
+**Developers/maintainers** — clone the repo locally and setup will detect it:
 ```bash
-git clone https://github.com/mcaps-microsoft/MSX-MCP.git ~/repos/MSX-MCP
+git clone https://github.com/mcaps-microsoft/MSX-MCP.git ~/repos/msx-mcp
 ```
-When a local clone is found at `~/repos/MSX-MCP` (or `~/repos/msx-mcp`), setup uses it as an MCP server directly and **skips** the plugin install. This lets you edit code and have changes take effect immediately.
+When a local clone exists, setup registers it as a local plugin and the `copilot-msx` alias points directly at your checkout. Edits take effect immediately after rebuilding.
 
 ### Managing plugins
 
