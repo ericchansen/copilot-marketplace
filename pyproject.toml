@@ -1,0 +1,20 @@
+[project]
+name = "copilot-config"
+version = "1.0.0"
+description = "GitHub Copilot CLI configuration, skills, and MCP/LSP server management"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "UP", "SIM"]
+ignore = ["E402"]
+
+[tool.ruff.lint.per-file-ignores]
+"external/**" = ["E", "F", "W", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
