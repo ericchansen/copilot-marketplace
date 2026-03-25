@@ -83,7 +83,7 @@ def generate_mcp_config(
 ) -> None:
     """Write ``~/.copilot/mcp-config.json`` from the enabled server list."""
     # Remove legacy symlink/junction if present
-    if (output_path.exists() or is_link(output_path)) and is_link(output_path):
+    if is_link(output_path):
         output_path.unlink()
 
     mcp_servers: dict = {}
