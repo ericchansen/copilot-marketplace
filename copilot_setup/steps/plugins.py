@@ -10,7 +10,13 @@ from copilot_setup.ui_shim import UIShim
 from lib.skills import install_plugins, link_local_plugins
 
 PLUGINS = [
-    {"name": "msx-mcp", "source": "mcaps-microsoft/MSX-MCP", "work": True, "localServerName": "msx-mcp"},
+    {
+        "name": "msx-mcp",
+        "source": "mcaps-microsoft/MSX-MCP",
+        "work": True,
+        "localServerName": "msx-mcp",
+        "alias": "copilot-msx",
+    },
 ]
 
 

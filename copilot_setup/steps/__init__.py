@@ -15,6 +15,7 @@ from copilot_setup.steps.mcp_config import McpConfigStep
 from copilot_setup.steps.mcp_env import McpEnvStep
 from copilot_setup.steps.plugin_update import PluginUpdateStep
 from copilot_setup.steps.plugins import PluginsStep
+from copilot_setup.steps.shell_alias import ShellAliasStep
 from copilot_setup.steps.skills import SkillsStep
 from copilot_setup.steps.stale_cleanup import StaleCleanupStep
 from copilot_setup.steps.trusted_folders import TrustedFoldersStep
@@ -31,6 +32,7 @@ ALL_STEPS = [
     LegacyCleanupStep(),
     PluginsStep(),
     PluginUpdateStep(),
+    ShellAliasStep(),
     McpBuildStep(),
     McpEnvStep(),
     McpConfigStep(),
@@ -52,6 +54,7 @@ __all__ = [
     "McpEnvStep",
     "PluginUpdateStep",
     "PluginsStep",
+    "ShellAliasStep",
     "SkillsStep",
     "StaleCleanupStep",
     "TrustedFoldersStep",

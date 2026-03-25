@@ -165,6 +165,10 @@ def install_plugins(ui, plugins: list[dict], local_clone_map: dict[str, Path], s
         if result is not None:
             ui.item(name, "created", f"installed from {source}")
             summary["plugins_installed"].append(name)
+            # Disable-by-default for alias plugins (opt-in via shell alias)
+            if plugin.get("alias"):
+                _run_copilot(["plugin", "disable", name], check=False)
+                ui.print_msg(f"disabled by default — use '{plugin['alias']}' alias to opt in", "info")
         else:
             ui.item(name, "failed", f"install failed for {source}")
             summary["plugins_failed"].append(name)
@@ -256,7 +260,7 @@ def link_local_plugins(
                     "marketplace": "",
                     "version": version,
                     "installed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                    "enabled": True,
+                    "enabled": not bool(plugin.get("alias")),
                     "cache_path": str(junction_path),
                     "source": {"source": "github", "repo": source},
                 }
