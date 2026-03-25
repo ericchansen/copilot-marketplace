@@ -1,4 +1,5 @@
 """Git authentication detection and clone/pull helpers with multi-method fallback."""
+
 from __future__ import annotations
 
 import os
@@ -47,6 +48,7 @@ def _ssh_to_https(url: str) -> str:
 # ---------------------------------------------------------------------------
 # Auth detection
 # ---------------------------------------------------------------------------
+
 
 def detect_git_auth(ui, auth_state: dict) -> None:
     """Detect available git authentication methods and populate *auth_state*."""
@@ -99,6 +101,7 @@ def detect_git_auth(ui, auth_state: dict) -> None:
 # Clone / pull helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_origin_url(repo_path: str) -> str | None:
     r = _run(["git", "remote", "get-url", "origin"], cwd=repo_path)
     return r.stdout.strip() if r.returncode == 0 else None
@@ -132,8 +135,7 @@ def _validate_identity(repo_path: str, expected_url: str, ui) -> bool:
             return True
 
     ui.print_msg(
-        f"Repo identity mismatch: expected {expected_slug}, "
-        f"found origin={origin_slug}",
+        f"Repo identity mismatch: expected {expected_slug}, found origin={origin_slug}",
         "err",
     )
     return False
@@ -185,8 +187,7 @@ def _pull_recovery_menu(display_name: str, repo_path: str, ui) -> str:
     """Interactive recovery after a failed pull. Returns final status."""
     while True:
         choice = ui.prompt(
-            f"Pull failed for {display_name}. "
-            "[C]ontinue (use local) / [R]etry / [S]kip / [A]bort",
+            f"Pull failed for {display_name}. [C]ontinue (use local) / [R]etry / [S]kip / [A]bort",
             default="C",
         ).upper()
         if choice == "C":

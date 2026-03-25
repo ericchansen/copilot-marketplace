@@ -5,10 +5,14 @@ from __future__ import annotations
 from copilot_setup.models import SetupContext, StepResult
 from lib.config import patch_config_json
 
-
 # Keys allowed to be copied from config.portable.json → config.json
 PORTABLE_ALLOWED_KEYS = [
-    "banner", "model", "render_markdown", "theme", "experimental", "reasoning_effort",
+    "banner",
+    "model",
+    "render_markdown",
+    "theme",
+    "experimental",
+    "reasoning_effort",
 ]
 
 

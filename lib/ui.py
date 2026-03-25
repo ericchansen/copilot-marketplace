@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import time
 import unicodedata
+from typing import ClassVar
 
 # Enable ANSI escape codes on Windows Terminal
 os.system("")
@@ -113,7 +114,7 @@ class UI:
             if len(group) == 1:
                 self._render_item_dim(group[0][0], group[0][2])
             else:
-                print(f"    {GRAY}ℹ\uFE0E {len(group)} {label}{RESET}")
+                print(f"    {GRAY}ℹ\ufe0e {len(group)} {label}{RESET}")
 
         # Show failed/warn/skipped individually (never collapse)
         for name, status, detail in alerts:
@@ -129,22 +130,19 @@ class UI:
         suffix = f" ({elapsed:.1f}s) " if elapsed is not None else " "
         visible_len = len(prefix) + 1 + len(self.step_name) + len(suffix)
         dash_count = max(2, 50 - visible_len)
-        print(
-            f"{CYAN}{prefix}{RESET} {CYAN}{self.step_name}{RESET}"
-            f"{GRAY}{suffix}{'─' * dash_count}{RESET}"
-        )
+        print(f"{CYAN}{prefix}{RESET} {CYAN}{self.step_name}{RESET}{GRAY}{suffix}{'─' * dash_count}{RESET}")
         self.header_printed = True
 
     # ── Item renderers ──────────────────────────────────────────────────────
 
-    _ICONS: dict[str, str] = {
+    _ICONS: ClassVar[dict[str, str]] = {
         "created": f"{GREEN}✓{RESET}",
         "success": f"{GREEN}✓{RESET}",
-        "exists":  f"{GRAY}ℹ\uFE0E{RESET}",
-        "info":    f"{CYAN}ℹ\uFE0E{RESET}",
-        "failed":  f"{RED}✗{RESET}",
-        "warn":    f"{YELLOW}⚠\uFE0E{RESET}",
-        "skipped": f"{YELLOW}⚠\uFE0E{RESET}",
+        "exists": f"{GRAY}ℹ\ufe0e{RESET}",
+        "info": f"{CYAN}ℹ\ufe0e{RESET}",
+        "failed": f"{RED}✗{RESET}",
+        "warn": f"{YELLOW}⚠\ufe0e{RESET}",
+        "skipped": f"{YELLOW}⚠\ufe0e{RESET}",
     }
 
     def _render_item(self, name: str, status: str, detail: str) -> None:
@@ -155,7 +153,7 @@ class UI:
     @staticmethod
     def _render_item_dim(name: str, detail: str) -> None:
         suffix = f" — {detail}" if detail else ""
-        print(f"    {GRAY}ℹ\uFE0E {name}{suffix}{RESET}")
+        print(f"    {GRAY}ℹ\ufe0e {name}{suffix}{RESET}")
 
     # ── Immediate output (not buffered) ─────────────────────────────────────
 
@@ -166,10 +164,10 @@ class UI:
 
         formats = {
             "success": f"    {GREEN}✓{RESET} {msg}",
-            "info":    f"    {CYAN}ℹ\uFE0E{RESET} {msg}",
-            "warn":    f"    {YELLOW}⚠\uFE0E{RESET} {msg}",
-            "err":     f"    {RED}✗{RESET} {msg}",
-            "dim":     f"    {GRAY}{msg}{RESET}",
+            "info": f"    {CYAN}ℹ\ufe0e{RESET} {msg}",
+            "warn": f"    {YELLOW}⚠\ufe0e{RESET} {msg}",
+            "err": f"    {RED}✗{RESET} {msg}",
+            "dim": f"    {GRAY}{msg}{RESET}",
         }
         print(formats.get(status, f"    {msg}"))
 
@@ -226,13 +224,13 @@ class UI:
         min_value_w = 23
         if value_w < min_value_w:
             value_w = min_value_w
-        left_col = label_w + 2   # padding on each side of label
+        left_col = label_w + 2  # padding on each side of label
         right_col = value_w + 2  # padding on each side of value
         full_inner = left_col + 1 + right_col  # +1 for middle separator
 
         title = "✨  Setup Complete"
         title_visual_len = _visual_width(title)
-        min_inner = title_visual_len + 4   # at least 2 spaces padding each side
+        min_inner = title_visual_len + 4  # at least 2 spaces padding each side
         if full_inner < min_inner:
             right_col += min_inner - full_inner
             value_w = right_col - 2
@@ -247,15 +245,14 @@ class UI:
         print(f"  {CYAN}│{RESET}{' ' * pad_left}{title}{' ' * pad_right}{CYAN}│{RESET}")
         print(f"  {CYAN}├{'─' * left_col}┬{'─' * right_col}┤{RESET}")
         for label, value in rows:
-            print(
-                f"  {CYAN}│{RESET} {label:<{label_w}} "
-                f"{CYAN}│{RESET} {value:<{value_w}} {CYAN}│{RESET}"
-            )
+            print(f"  {CYAN}│{RESET} {label:<{label_w}} {CYAN}│{RESET} {value:<{value_w}} {CYAN}│{RESET}")
         print(f"  {CYAN}└{'─' * left_col}┴{'─' * right_col}┘{RESET}")
         print()
 
     def _build_summary_rows(
-        self, data: dict, enabled_servers: list,
+        self,
+        data: dict,
+        enabled_servers: list,
     ) -> list[tuple[str, str]]:
         rows: list[tuple[str, str]] = []
 

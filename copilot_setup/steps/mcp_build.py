@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 from pathlib import Path
 
@@ -38,8 +37,7 @@ class McpBuildStep:
         # Compute plugin-managed names (needs enabled_servers + plugin_server_names from plugins step)
         plugin_server_names = getattr(ctx, "plugin_server_names", set())
         ctx.plugin_managed_names = {
-            s["name"] for s in ctx.enabled_servers
-            if s.get("pluginFallback") and s["name"] in plugin_server_names
+            s["name"] for s in ctx.enabled_servers if s.get("pluginFallback") and s["name"] in plugin_server_names
         }
 
         local_clone_map: dict[str, Path] = getattr(ctx, "local_clone_map", {})
@@ -81,7 +79,7 @@ class McpBuildStep:
             else:
                 detected = None
                 for dp in server.get("defaultPaths", []):
-                    expanded = Path(os.path.expanduser(dp))
+                    expanded = Path(dp).expanduser()
                     if expanded.exists():
                         detected = str(expanded.resolve())
                         break
@@ -123,8 +121,13 @@ class McpBuildStep:
                 build_ok = True
                 for cmd in server["build"]:
                     r = subprocess.run(
-                        cmd, shell=True, cwd=resolved_path,
-                        capture_output=True, text=True, encoding="utf-8", errors="replace",
+                        cmd,
+                        shell=True,
+                        cwd=resolved_path,
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        errors="replace",
                     )
                     if r.returncode != 0:
                         result.item(server_name, "failed", f"'{cmd}' failed (exit {r.returncode})")

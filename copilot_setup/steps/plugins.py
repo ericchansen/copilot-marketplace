@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 from copilot_setup.models import SetupContext, StepResult
@@ -46,7 +45,7 @@ class PluginsStep:
                 continue
             entry_point = server_def.get("entryPoint", "")
             for dp in server_def.get("defaultPaths", []):
-                candidate = Path(os.path.expanduser(dp))
+                candidate = Path(dp).expanduser()
                 if (
                     candidate.is_dir()
                     and (candidate / ".git").is_dir()

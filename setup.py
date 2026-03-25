@@ -11,6 +11,7 @@ Usage:
     python setup.py --non-interactive
     python setup.py --clean-orphans
 """
+
 from __future__ import annotations
 
 import argparse
@@ -28,9 +29,9 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from lib.ui import UI  # noqa: E402
-from lib.platform_ops import home_dir  # noqa: E402
-from lib.optional_deps import run_optional_deps  # noqa: E402
+from lib.optional_deps import run_optional_deps
+from lib.platform_ops import home_dir
+from lib.ui import UI
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -79,6 +80,7 @@ def main() -> None:
 
     if cmd == "backup":
         from lib.backup import onedrive_backup
+
         ui = UI(["Backup · Config Files", "Backup · Session Store"])
         ui.header("💾  Copilot Config Backup")
         onedrive_backup(ui, skip_session=args.skip_session)
@@ -86,6 +88,7 @@ def main() -> None:
 
     if cmd == "restore":
         from lib.restore import run_restore
+
         ui = UI(["Scan Symlinks", "Restore from Backup"])
         ui.header("🔄  Copilot Config Restore")
         run_restore(ui, REPO_ROOT, non_interactive=args.non_interactive)
@@ -93,6 +96,7 @@ def main() -> None:
 
     if cmd == "sync-skills":
         from lib.skills import sync_untracked_skills
+
         repo_skills = REPO_ROOT / COPILOT_DIR / SKILLS_DIR
         copilot_skills = home_dir() / ".copilot" / "skills"
         ui = UI(["Scan Skills", "Adopt Skills"])

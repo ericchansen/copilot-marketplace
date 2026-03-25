@@ -19,8 +19,10 @@ class SkillsStep:
         result = StepResult()
         shim = UIShim()
         shim_summary: dict = {
-            "skills_created": [], "skills_existed": [],
-            "skills_skipped": [], "skills_failed": [],
+            "skills_created": [],
+            "skills_existed": [],
+            "skills_skipped": [],
+            "skills_failed": [],
         }
 
         local_skills = get_skill_folders(ctx.repo_skills)

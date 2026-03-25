@@ -6,12 +6,12 @@ import os
 import shutil
 from pathlib import Path
 
-from lib.platform_ops import IS_WINDOWS, home_dir, is_link, get_link_target, remove_link
-
+from lib.platform_ops import IS_WINDOWS, get_link_target, home_dir, is_link, remove_link
 
 # ---------------------------------------------------------------------------
 # Path helpers
 # ---------------------------------------------------------------------------
+
 
 def _normalize_target(target: Path) -> str:
     """Normalize a link target path for comparison.
@@ -23,7 +23,7 @@ def _normalize_target(target: Path) -> str:
     if IS_WINDOWS:
         for prefix in ("\\\\?\\UNC\\", "\\\\?\\"):
             if s.startswith(prefix):
-                s = s[len(prefix):]
+                s = s[len(prefix) :]
     return s
 
 
@@ -73,6 +73,7 @@ def _build_owned_roots(repo_root: Path) -> list[str]:
 # Link removal
 # ---------------------------------------------------------------------------
 
+
 def _remove_owned_links(
     ui,
     scan_dir: Path,
@@ -113,6 +114,7 @@ def _remove_owned_links(
 # Backup restore
 # ---------------------------------------------------------------------------
 
+
 def _restore_from_backup(ui, backup_dir: Path, copilot_home: Path) -> None:
     """Copy files from *backup_dir* into *copilot_home* where they don't exist."""
     copilot_home.mkdir(parents=True, exist_ok=True)
@@ -150,6 +152,7 @@ def _restore_from_backup(ui, backup_dir: Path, copilot_home: Path) -> None:
 # Public entry point
 # ---------------------------------------------------------------------------
 
+
 def run_restore(ui, repo_root: Path, non_interactive: bool = False) -> None:
     """Remove setup-created symlinks/junctions and optionally restore from backup."""
     copilot_home = home_dir() / ".copilot"
@@ -162,15 +165,11 @@ def run_restore(ui, repo_root: Path, non_interactive: bool = False) -> None:
     if not copilot_home.is_dir():
         ui.print_msg("~/.copilot/ does not exist — nothing to do", "info")
     else:
-        removed.extend(
-            _remove_owned_links(ui, copilot_home, owned_roots, copilot_home)
-        )
+        removed.extend(_remove_owned_links(ui, copilot_home, owned_roots, copilot_home))
 
         skills_dir = copilot_home / "skills"
         if skills_dir.is_dir():
-            removed.extend(
-                _remove_owned_links(ui, skills_dir, owned_roots, copilot_home)
-            )
+            removed.extend(_remove_owned_links(ui, skills_dir, owned_roots, copilot_home))
             # Remove skills dir if now empty
             try:
                 if not any(skills_dir.iterdir()):
@@ -180,20 +179,14 @@ def run_restore(ui, repo_root: Path, non_interactive: bool = False) -> None:
                 pass
 
     if not removed:
-        ui.print_msg(
-            "No symlinks/junctions found pointing into managed roots", "info"
-        )
+        ui.print_msg("No symlinks/junctions found pointing into managed roots", "info")
 
     # --- Step 2: Offer to restore from backup ---
     ui.section("Check for backups")
 
     home = home_dir()
     backups = sorted(
-        (
-            d
-            for d in home.iterdir()
-            if d.is_dir() and d.name.startswith(".copilot-backup-")
-        ),
+        (d for d in home.iterdir() if d.is_dir() and d.name.startswith(".copilot-backup-")),
         key=lambda d: d.name,
         reverse=True,
     )
@@ -202,9 +195,7 @@ def run_restore(ui, repo_root: Path, non_interactive: bool = False) -> None:
         ui.print_msg("No ~/.copilot-backup-* directories found", "info")
     else:
         latest = backups[0]
-        ui.print_msg(
-            f"Found {len(backups)} backup(s). Most recent: {latest.name}", "info"
-        )
+        ui.print_msg(f"Found {len(backups)} backup(s). Most recent: {latest.name}", "info")
 
         should_restore = False
         if not non_interactive:

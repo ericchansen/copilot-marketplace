@@ -20,12 +20,10 @@ _FILE_ATTRIBUTE_REPARSE_POINT = 0x400
 # Path helpers
 # ---------------------------------------------------------------------------
 
+
 def home_dir() -> Path:
     """Return the user's home directory."""
-    if IS_WINDOWS:
-        raw = os.environ.get("USERPROFILE")
-    else:
-        raw = os.environ.get("HOME")
+    raw = os.environ.get("USERPROFILE") if IS_WINDOWS else os.environ.get("HOME")
     return Path(raw) if raw else Path.home()
 
 
@@ -55,13 +53,14 @@ def _resolve_paths_match(a: Path, b: Path) -> bool:
 # Link detection
 # ---------------------------------------------------------------------------
 
+
 def is_link(path: Path) -> bool:
     """Return True if *path* is a symlink or a Windows junction (reparse point)."""
     if path.is_symlink():
         return True
     if IS_WINDOWS:
         try:
-            attrs = os.stat(path, follow_symlinks=False).st_file_attributes  # type: ignore[attr-defined]
+            attrs = path.stat(follow_symlinks=False).st_file_attributes  # type: ignore[attr-defined]
             return bool(attrs & _FILE_ATTRIBUTE_REPARSE_POINT)
         except (OSError, AttributeError):
             return False
@@ -73,7 +72,7 @@ def get_link_target(path: Path) -> Path | None:
     if not is_link(path):
         return None
     try:
-        return Path(os.readlink(path))
+        return path.readlink()
     except OSError:
         # Fallback: compare resolved path to the link path itself
         try:
@@ -89,6 +88,7 @@ def get_link_target(path: Path) -> Path | None:
 # Link removal
 # ---------------------------------------------------------------------------
 
+
 def remove_link(path: Path) -> None:
     """Remove a symlink or junction.
 
@@ -96,7 +96,7 @@ def remove_link(path: Path) -> None:
     ``shutil.rmtree`` would delete the *target's* contents.
     """
     if IS_WINDOWS and path.is_dir():
-        os.rmdir(path)
+        path.rmdir()
     else:
         path.unlink()
 
@@ -104,6 +104,7 @@ def remove_link(path: Path) -> None:
 # ---------------------------------------------------------------------------
 # Directory links (junctions on Windows, symlinks on Unix)
 # ---------------------------------------------------------------------------
+
 
 def create_dir_link(
     link_path: Path,
@@ -128,9 +129,7 @@ def create_dir_link(
     # --- real directory exists ---
     elif link_path.is_dir():
         if interactive:
-            answer = input(
-                f"{link_path} is a real directory. Replace with junction/symlink? [y/N] "
-            )
+            answer = input(f"{link_path} is a real directory. Replace with junction/symlink? [y/N] ")
             if answer.strip().lower() != "y":
                 return "skipped"
         else:
@@ -149,7 +148,7 @@ def create_dir_link(
                 check=True,
             )
         else:
-            os.symlink(target_path, link_path)
+            link_path.symlink_to(target_path)
         return "created"
     except (subprocess.CalledProcessError, OSError):
         return "failed"
@@ -158,6 +157,7 @@ def create_dir_link(
 # ---------------------------------------------------------------------------
 # File links (symlinks, with copy fallback on Windows)
 # ---------------------------------------------------------------------------
+
 
 def create_file_link(
     link_path: Path,
@@ -182,9 +182,7 @@ def create_file_link(
     # --- real file exists ---
     elif link_path.is_file():
         if interactive:
-            answer = input(
-                f"{link_path} is a real file. Replace with symlink? [y/N] "
-            )
+            answer = input(f"{link_path} is a real file. Replace with symlink? [y/N] ")
             if answer.strip().lower() != "y":
                 return "skipped"
         else:
@@ -199,7 +197,7 @@ def create_file_link(
         return _create_file_link_windows(link_path, target_path)
 
     try:
-        os.symlink(target_path, link_path)
+        link_path.symlink_to(target_path)
         return "created"
     except OSError:
         return "failed"
@@ -220,7 +218,7 @@ def _create_file_link_windows(link_path: Path, target_path: Path) -> str:
 
     # 2. Try os.symlink (requires Developer Mode)
     try:
-        os.symlink(target_path, link_path)
+        link_path.symlink_to(target_path)
         return "created"
     except OSError:
         pass
@@ -236,6 +234,7 @@ def _create_file_link_windows(link_path: Path, target_path: Path) -> str:
 # ---------------------------------------------------------------------------
 # LSP binary validation
 # ---------------------------------------------------------------------------
+
 
 def validate_lsp_binary(command: str, args: list[str]) -> bool:
     """Check that an LSP server binary exists and stays alive on startup."""

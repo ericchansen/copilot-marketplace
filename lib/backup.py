@@ -7,7 +7,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from lib.platform_ops import IS_WINDOWS, is_link, get_link_target, home_dir
+from lib.platform_ops import IS_WINDOWS, get_link_target, home_dir, is_link
 
 _CONFIG_FILES = [
     "config.json",
@@ -184,11 +184,7 @@ def onedrive_backup(ui, skip_session: bool = False) -> dict:
 
             # Prune old snapshots — keep last 10
             snapshots = sorted(
-                (
-                    f
-                    for f in snap_dir.iterdir()
-                    if f.name.startswith("session-store-2") and f.name.endswith(".db")
-                ),
+                (f for f in snap_dir.iterdir() if f.name.startswith("session-store-2") and f.name.endswith(".db")),
                 key=lambda f: f.name,
                 reverse=True,
             )
