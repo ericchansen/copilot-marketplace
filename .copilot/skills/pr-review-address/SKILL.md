@@ -51,17 +51,48 @@ For 🟢 Style/preference items:
 
 **Every review comment gets a reply.** Never leave feedback unacknowledged.
 
+**CRITICAL: Reply to each thread individually using `addPullRequestReviewThreadReply`.**
+Do NOT use `gh pr comment` — that adds a general conversation comment at the bottom of the PR, not an inline reply to the review thread. Each thread must get its own reply so reviewers see responses in context.
+
+### Reply mechanism
+
+Use the `addPullRequestReviewThreadReply` GraphQL mutation to reply to each thread. Pass the body as a GraphQL **variable** (not interpolated into the query string) to avoid PowerShell encoding issues with backticks and special characters:
+
+```powershell
+gh api graphql `
+  -f query='mutation($threadId: ID!, $body: String!) {
+    addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $threadId, body: $body}) {
+      comment { id }
+    }
+  }' `
+  -f threadId='PRRT_xxxxx' `
+  -f body='Fixed in abc1234. Used generic error message instead of str(e) to avoid leaking internals.'
+```
+
+**Encoding safety rules:**
+- Always use **single-quoted strings** (`'...'`) for `-f body=` to prevent PowerShell backtick interpretation.
+- If the reply body contains single quotes, write the body to a temp file using the **`create` tool** (NOT PowerShell `Out-File`), then read it back:
+  ```powershell
+  $replyBody = Get-Content "$env:TEMP\reply.md" -Raw
+  gh api graphql -f query='...' -f threadId='PRRT_xxx' -f body=$replyBody
+  ```
+- **NEVER** use double-quoted strings for bodies containing backticks — PowerShell interprets `` `n `` as newline, `` `a `` as BEL, etc.
+
+### Reply format
+
+Keep replies **short and direct**. One to two sentences max. No markdown headers, no bullet lists, no summary tables. The reply appears inline next to the code — treat it like a code review conversation, not a report.
+
 ### For items you FIXED:
 ```
-Fixed in <commit-sha>. <Brief explanation of what changed and why.>
+Fixed in <commit-sha>. <One sentence explaining what changed.>
 ```
+Example: `Fixed in a1b2c3d. Using generic error message instead of str(e) to avoid leaking exception details.`
 
 ### For items you DISAGREE with:
 ```
-I considered this but chose not to implement it because:
-<Reasoned explanation with evidence — link to docs, show code context, 
-explain the tradeoff. Be respectful but direct.>
+<One or two sentences explaining why with evidence. Be respectful but direct.>
 ```
+Example: `This is intentional — the retry here covers Azure Flex cold-start which can take 60s+. Removing it would regress the fix for #54. See https://learn.microsoft.com/...`
 
 Do NOT blindly agree. If a reviewer suggests something that would:
 - Introduce complexity without proportional benefit
@@ -73,36 +104,81 @@ Do NOT blindly agree. If a reviewer suggests something that would:
 
 ### For questions:
 ```
-<Direct answer to the question, with context if needed.>
+<Direct answer in one or two sentences.>
 ```
 
-## Step 5: Resolve Threads
+### For items deferred (valid but out of scope):
+```
+Good catch. <Why it's out of scope for this PR>. Tracked in #<issue> / will follow up separately.
+```
 
-**CRITICAL: Resolve ALL threads after replying.** Every thread you reply to must be resolved — no exceptions. Unresolved threads signal incomplete work to the PR author.
+## Step 5: Reply + Resolve Each Thread
 
-After replying to a comment:
+**CRITICAL: Every thread gets a reply AND a resolve.** Process them one at a time: reply, then immediately resolve.
+
+### Per-thread workflow
+
+For EACH unresolved thread:
+
+```powershell
+# 1. Reply to the thread
+gh api graphql `
+  -f query='mutation($threadId: ID!, $body: String!) {
+    addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $threadId, body: $body}) {
+      comment { id }
+    }
+  }' `
+  -f threadId='PRRT_xxxxx' `
+  -f body='Fixed in a1b2c3d. Used generic error message instead of leaking exception details.'
+
+# 2. Immediately resolve it
+gh api graphql `
+  -f query='mutation($threadId: ID!) {
+    resolveReviewThread(input: {threadId: $threadId}) {
+      thread { isResolved }
+    }
+  }' `
+  -f threadId='PRRT_xxxxx'
+```
+
+### Resolution rules
+
+After replying:
 1. If you **fixed it** → resolve the thread.
 2. If you **explained why it's intentional / pushed back** → resolve the thread. Your explanation IS the resolution. Don't leave it hanging — especially for automated reviewers (Copilot, bots) where there's no human to "come back and check."
 3. If you **partially addressed** → reply explaining what's done and what's deferred, then resolve. The reply documents the gap.
 4. If you **answered a question** → resolve the thread.
 
-Use the GraphQL API to resolve threads:
-```
-gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "<THREAD_NODE_ID>"}) { thread { isResolved } } }'
-```
+### Getting thread data
 
-To get thread node IDs:
+Fetch all threads with their node IDs and first comment body:
 ```
 gh api graphql -f query='{
   repository(owner: "OWNER", name: "REPO") {
     pullRequest(number: PR_NUMBER) {
       reviewThreads(first: 100) {
         pageInfo { hasNextPage endCursor }
-        nodes { id isResolved comments(first: 1) { nodes { body } } }
+        nodes { id isResolved comments(first: 1) { nodes { body path line } } }
       }
     }
   }
 }'
+```
+
+### Anti-patterns
+
+```powershell
+# ❌ NEVER — general PR comment instead of thread reply
+gh pr comment 53 --body "Here's what I fixed: ..."
+# This adds a comment to the conversation tab, NOT inline on the review thread
+
+# ❌ NEVER — one summary reply covering all threads
+gh pr comment 53 --body "Addressed all feedback: 1) Fixed X, 2) Fixed Y, 3) Pushed back on Z"
+# Each thread must get its own individual reply
+
+# ❌ NEVER — double-quoted body with backticks
+gh api graphql -f body="Fixed in `abc123`"
+# PowerShell interprets `a as BEL character — use single quotes
 ```
 
 ## Step 6: Fix CI/CD Failures
