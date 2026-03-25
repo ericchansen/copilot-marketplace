@@ -20,9 +20,10 @@ class StaleCleanupStep:
         shim = UIShim()
         shim_summary: dict = {}
         linked_names = {s["name"] for s in getattr(ctx, "local_skills", [])}
+        auto_remove = ctx.include_clean_orphans or ctx.non_interactive
         cleanup_stale(
             shim, ctx.copilot_skills, linked_names, ctx.repo_root, ctx.external_dir,
-            ctx.include_clean_orphans, ctx.non_interactive, shim_summary,
+            ctx.include_clean_orphans, auto_remove, shim_summary,
         )
 
         for name, status, detail in shim.items:

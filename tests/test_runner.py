@@ -71,8 +71,10 @@ class TestRunSteps:
         summary = run_steps(steps, setup_ctx, ui)
 
         assert summary.steps["Skip"].status == "skipped"
-        assert ui.steps_started == []
-        assert ui.steps_ended == 0
+        # Skipped steps still advance the UI counter
+        assert ui.steps_started == ["Skip"]
+        assert ui.steps_ended == 1
+        assert ui.items == []  # no items rendered for skipped steps
 
     def test_mixed_run_and_skip(self, setup_ctx: SetupContext):
         ui = FakeUI()
@@ -87,7 +89,7 @@ class TestRunSteps:
         assert summary.steps["A"].status == "ok"
         assert summary.steps["B"].status == "skipped"
         assert summary.steps["C"].status == "ok"
-        assert ui.steps_started == ["A", "C"]
+        assert ui.steps_started == ["A", "B", "C"]
 
     def test_protocol_check(self):
         assert isinstance(AlwaysRunStep(), Step)

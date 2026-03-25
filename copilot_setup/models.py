@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 
 # ---------------------------------------------------------------------------
@@ -122,6 +122,11 @@ class SetupContext:
     enabled_servers: list[dict] = field(default_factory=list)
     mcp_paths: dict[str, str] = field(default_factory=dict)
     local_skills: list[dict] = field(default_factory=list)
+    lsp_count: int = 0
+    lsp_skipped: list[str] = field(default_factory=list)
+
+    # Optional real UI for interactive delegation (set by runner)
+    real_ui: Any = None
 
     @property
     def copilot_skills(self) -> Path:
@@ -145,7 +150,7 @@ class Summary:
 
     @property
     def has_failures(self) -> bool:
-        return any(r.has_failures for r in self.steps.values())
+        return any(r.status == "failed" or r.has_failures for r in self.steps.values())
 
     @property
     def all_items(self) -> list[ItemResult]:

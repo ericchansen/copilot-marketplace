@@ -156,36 +156,30 @@ def _run_setup(args: argparse.Namespace) -> None:
     # Run all steps
     summary = run_steps(ALL_STEPS, ctx, ui)
 
-    # Optional dependencies (interactive only)
-    if not args.non_interactive:
-        lsp_config_path = copilot_home / "lsp-config.json"
-        opt_summary: dict = {
-            "optional_installed": [],
-            "optional_skipped": [],
-            "optional_failed": [],
-        }
-        run_optional_deps(ui, lsp_servers_json, lsp_config_path, opt_summary)
-
     # Summary — bridge to old UI summary for now
+    mcp_build_items = summary.step_items("MCP · Build Servers")
+    config_link_items = summary.step_items("Setup · Config Symlinks")
+    config_servers = [s for s in ctx.enabled_servers if s["name"] not in ctx.plugin_managed_names]
+
     old_summary: dict = {
         "backed_up": False,
         "backup_dir": "",
-        "config_files_linked": [i.name for i in summary.items_by_status("created")],
-        "config_files_skipped": [],
+        "config_files_linked": [i.name for i in config_link_items if i.status == "created"],
+        "config_files_skipped": [i.name for i in config_link_items if i.status == "skipped"],
         "config_patched": False,
         "trusted_folder_added": False,
         "skills_created": [],
         "skills_existed": [],
         "skills_skipped": [],
         "skills_failed": [],
-        "mcp_servers_built": [],
-        "mcp_servers_failed": [i.name for i in summary.items_by_status("failed")],
+        "mcp_servers_built": [i.name for i in mcp_build_items if i.status == "success"],
+        "mcp_servers_failed": [i.name for i in mcp_build_items if i.status == "failed"],
         "mcp_env_missing": [],
-        "mcp_config_generated": True,
-        "mcp_server_count": len(ctx.enabled_servers),
-        "lsp_config_generated": True,
-        "lsp_count": 0,
-        "lsp_skipped": [],
+        "mcp_config_generated": "MCP · Config" in summary.steps,
+        "mcp_server_count": len(config_servers),
+        "lsp_config_generated": "LSP · Config" in summary.steps,
+        "lsp_count": ctx.lsp_count,
+        "lsp_skipped": ctx.lsp_skipped,
         "plugin_junctions_cleaned": 0,
         "plugins_installed": [],
         "plugins_skipped": [],
@@ -197,6 +191,12 @@ def _run_setup(args: argparse.Namespace) -> None:
         "optional_skipped": [],
         "optional_failed": [],
     }
+
+    # Optional dependencies (interactive only)
+    if not args.non_interactive:
+        lsp_config_path = copilot_home / "lsp-config.json"
+        run_optional_deps(ui, lsp_servers_json, lsp_config_path, old_summary)
+
     ui.summary(old_summary, ctx.enabled_servers)
 
 
