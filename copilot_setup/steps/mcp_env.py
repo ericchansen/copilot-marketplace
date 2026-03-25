@@ -28,10 +28,12 @@ class McpEnvStep:
                     result.item(var, "exists", "set ✓")
                 elif not ctx.non_interactive and ctx.real_ui is not None:
                     ctx.real_ui.print_msg(
-                        f"⚠ {var} (required by {server['name']}) is not set", "warn",
+                        f"⚠ {var} (required by {server['name']}) is not set",
+                        "warn",
                     )
                     user_val = ctx.real_ui.prompt(
-                        f"Enter value for {var} (or Enter to skip)", default="",
+                        f"Enter value for {var} (or Enter to skip)",
+                        default="",
                     )
                     if user_val:
                         os.environ[var] = user_val

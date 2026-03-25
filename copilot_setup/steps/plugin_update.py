@@ -19,7 +19,9 @@ class PluginUpdateStep:
         result = StepResult()
         shim = UIShim()
         shim_summary: dict = {
-            "plugins_updated": [], "plugins_update_skipped": [], "plugins_update_failed": [],
+            "plugins_updated": [],
+            "plugins_update_skipped": [],
+            "plugins_update_failed": [],
         }
         update_plugins(shim, shim_summary)
 

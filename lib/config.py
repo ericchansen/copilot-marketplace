@@ -40,13 +40,14 @@ def patch_config_json(
 # MCP config generation
 # ---------------------------------------------------------------------------
 
+
 def _build_mcp_entry(server: dict, mcp_paths: dict, external_dir: Path) -> dict:
     """Build a single mcpServers entry from a source server definition."""
     server_type = server["type"]
     tools = server.get("tools", ["*"])
 
     if server_type == "npx":
-        args = ["-y", server["package"]] + server.get("args", [])
+        args = ["-y", server["package"], *server.get("args", [])]
         return {"type": "local", "command": "npx", "args": args, "tools": tools}
 
     if server_type == "http":
@@ -82,9 +83,8 @@ def generate_mcp_config(
 ) -> None:
     """Write ``~/.copilot/mcp-config.json`` from the enabled server list."""
     # Remove legacy symlink/junction if present
-    if output_path.exists() or is_link(output_path):
-        if is_link(output_path):
-            output_path.unlink()
+    if (output_path.exists() or is_link(output_path)) and is_link(output_path):
+        output_path.unlink()
 
     mcp_servers: dict = {}
     for server in servers:
@@ -99,6 +99,7 @@ def generate_mcp_config(
 # ---------------------------------------------------------------------------
 # LSP config generation
 # ---------------------------------------------------------------------------
+
 
 def generate_lsp_config(
     lsp_json_path: Path,

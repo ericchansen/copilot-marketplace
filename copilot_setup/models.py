@@ -12,7 +12,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
-
 # ---------------------------------------------------------------------------
 # Item-level result (one action within a step)
 # ---------------------------------------------------------------------------

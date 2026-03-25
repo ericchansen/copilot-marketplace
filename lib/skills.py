@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from lib.platform_ops import create_dir_link, is_link, get_link_target, remove_link
+from lib.platform_ops import create_dir_link, get_link_target, is_link, remove_link
 
 # Legacy keys to strip from .external-paths.json during cleanup
 _EXTERNAL_PATHS_LEGACY_KEYS = ("anthropic", "github", "msx-mcp", "spt-iq")
@@ -17,6 +17,7 @@ _EXTERNAL_PATHS_LEGACY_KEYS = ("anthropic", "github", "msx-mcp", "spt-iq")
 # ---------------------------------------------------------------------------
 # Skill discovery
 # ---------------------------------------------------------------------------
+
 
 def get_skill_folders(base_path: Path) -> list[dict]:
     """Return skill folder objects from *base_path*.
@@ -38,6 +39,7 @@ def get_skill_folders(base_path: Path) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Skill linking
 # ---------------------------------------------------------------------------
+
 
 def link_skills(
     ui,
@@ -71,6 +73,7 @@ def link_skills(
 # ---------------------------------------------------------------------------
 # Legacy junction cleanup
 # ---------------------------------------------------------------------------
+
 
 def legacy_cleanup(
     ui,
@@ -203,13 +206,7 @@ def link_local_plugins(
     registered: list[dict] = config_obj.get("installed_plugins", [])
     if not isinstance(registered, list):
         registered = []
-    registered_names = {
-        name
-        for p in registered
-        if isinstance(p, dict)
-        for name in [p.get("name")]
-        if name is not None
-    }
+    registered_names = {name for p in registered if isinstance(p, dict) for name in [p.get("name")] if name is not None}
     config_dirty = False
 
     for plugin in plugins:
@@ -242,8 +239,7 @@ def link_local_plugins(
             ui.item(
                 name,
                 "skipped",
-                f"plugin junction path exists as real directory: {junction_path} "
-                "— remove or replace to relink",
+                f"plugin junction path exists as real directory: {junction_path} — remove or replace to relink",
             )
             continue
         else:
@@ -254,15 +250,17 @@ def link_local_plugins(
         if name not in registered_names:
             from datetime import datetime, timezone
 
-            registered.append({
-                "name": name,
-                "marketplace": "",
-                "version": version,
-                "installed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                "enabled": True,
-                "cache_path": str(junction_path),
-                "source": {"source": "github", "repo": source},
-            })
+            registered.append(
+                {
+                    "name": name,
+                    "marketplace": "",
+                    "version": version,
+                    "installed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                    "enabled": True,
+                    "cache_path": str(junction_path),
+                    "source": {"source": "github", "repo": source},
+                }
+            )
             registered_names.add(name)
             config_dirty = True
             ui.item(name, "created", f"registered as plugin (v{version})")
@@ -322,6 +320,7 @@ def update_plugins(ui, summary: dict) -> None:
 # Stale symlink / orphan cleanup
 # ---------------------------------------------------------------------------
 
+
 def cleanup_stale(
     ui,
     copilot_skills: Path,
@@ -364,10 +363,7 @@ def cleanup_stale(
                 target_path = Path(target).resolve()
                 repo_root_path = Path(repo_root).resolve()
                 external_dir_path = Path(external_dir).resolve()
-                if (
-                    target_path.is_relative_to(repo_root_path)
-                    or target_path.is_relative_to(external_dir_path)
-                ):
+                if target_path.is_relative_to(repo_root_path) or target_path.is_relative_to(external_dir_path):
                     should_remove = True
 
         if not should_remove:
@@ -376,7 +372,7 @@ def cleanup_stale(
         # Prompt unless auto-removing
         if not remove_all:
             answer = ui.prompt(f"Remove orphan skill '{name}'? (Y/n/a)")
-            choice = (answer.strip().lower() or "y")  # default Y on Enter
+            choice = answer.strip().lower() or "y"  # default Y on Enter
             if choice == "a":
                 remove_all = True
             elif choice == "n":
@@ -403,6 +399,7 @@ def cleanup_stale(
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _run_copilot(args: list[str], *, check: bool = True) -> str | None:
     """Run a ``copilot`` CLI sub-command and return stdout, or None on failure."""
     try:
@@ -423,6 +420,7 @@ def _run_copilot(args: list[str], *, check: bool = True) -> str | None:
 # Untracked skill sync (replaces sync-skills.ps1)
 # ---------------------------------------------------------------------------
 
+
 def _parse_skill_description(skill_md: Path) -> str:
     """Extract the ``description`` field from SKILL.md YAML frontmatter."""
     try:
@@ -439,7 +437,7 @@ def _parse_skill_description(skill_md: Path) -> str:
             in_frontmatter = True
             continue
         if in_frontmatter and stripped.lower().startswith("description:"):
-            desc = stripped[len("description:"):].strip()
+            desc = stripped[len("description:") :].strip()
             # Strip surrounding quotes
             if len(desc) >= 2 and desc[0] in ("'", '"') and desc[-1] == desc[0]:
                 desc = desc[1:-1]
@@ -488,10 +486,7 @@ def sync_untracked_skills(
         detail = f"  {desc}" if desc else ""
         ui.print_msg(f"📦 {name}{detail}", "info")
 
-        if non_interactive:
-            should_adopt = True
-        else:
-            should_adopt = ui.confirm(f"Adopt '{name}' into repo?", default=True)
+        should_adopt = True if non_interactive else ui.confirm(f"Adopt '{name}' into repo?", default=True)
 
         if not should_adopt:
             skipped += 1

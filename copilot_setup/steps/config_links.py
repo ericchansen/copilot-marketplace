@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from copilot_setup.models import SetupContext, StepResult
 from lib.platform_ops import create_file_link
 
@@ -13,7 +15,7 @@ class ConfigLinksStep:
 
     # Config files to link: name is the filename in ~/.copilot/,
     # target (optional) overrides the source filename in the repo.
-    CONFIG_FILE_LINKS = [
+    CONFIG_FILE_LINKS: ClassVar[list[dict[str, str]]] = [
         {"name": "copilot-instructions.md"},
     ]
 
