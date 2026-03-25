@@ -101,7 +101,7 @@ class McpBuildStep:
                     resolved_path,
                     server_name,
                     auth_dict,
-                    ctx.non_interactive,
+                    True,  # Force non-interactive when using UIShim
                     clone_shim,
                 )
                 for name, status, detail in clone_shim.items:

@@ -49,22 +49,33 @@ def run_steps(steps: list[Step], ctx: SetupContext, ui) -> Summary:
 
     Returns a :class:`Summary` with every step's outcome.
     """
+    # Give steps access to the real UI for interactive delegation
+    ctx.real_ui = ui
+
     summary = Summary()
 
     for step in steps:
         if not step.check(ctx):
+            ui.step(step.name)
             summary.record(step.name, StepResult(status="skipped"))
+            ui.end_step()
             continue
 
         ui.step(step.name)
 
-        result = step.run(ctx)
+        try:
+            result = step.run(ctx)
 
-        # Render items through existing UI
-        for item in result.items:
-            ui.item(item.name, item.status, item.detail)
+            # Render items through existing UI
+            for item in result.items:
+                ui.item(item.name, item.status, item.detail)
 
-        summary.record(step.name, result)
-        ui.end_step()
+            summary.record(step.name, result)
+        except Exception:
+            failure_result = StepResult(status="failed")
+            summary.record(step.name, failure_result)
+            raise
+        finally:
+            ui.end_step()
 
     return summary

@@ -19,7 +19,9 @@ class LspConfigStep:
         result = StepResult()
         shim = UIShim()
         lsp_config_path = ctx.copilot_home / "lsp-config.json"
-        generate_lsp_config(ctx.lsp_servers_json, lsp_config_path, shim)
+        lsp_count, lsp_skipped = generate_lsp_config(ctx.lsp_servers_json, lsp_config_path, shim)
+        ctx.lsp_count = lsp_count
+        ctx.lsp_skipped = lsp_skipped
 
         for name, status, detail in shim.items:
             result.item(name, status, detail)
