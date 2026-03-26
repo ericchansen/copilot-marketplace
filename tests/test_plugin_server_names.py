@@ -11,7 +11,7 @@ from copilot_setup.models import SetupContext
 from copilot_setup.steps.plugins import PluginsStep
 
 
-def _make_ctx(tmp_dir: Path) -> SetupContext:
+def _make_ctx(tmp_path: Path) -> SetupContext:
     """Build a SetupContext that reads mcp-servers.json from a temp copy with defaultPaths cleared."""
     root = Path(__file__).resolve().parent.parent
 
@@ -19,7 +19,7 @@ def _make_ctx(tmp_dir: Path) -> SetupContext:
     real_data = json.loads((root / "mcp-servers.json").read_text("utf-8"))
     for s in real_data["servers"]:
         s["defaultPaths"] = []
-    tmp_mcp = tmp_dir / "mcp-servers.json"
+    tmp_mcp = tmp_path / "mcp-servers.json"
     tmp_mcp.write_text(json.dumps(real_data), "utf-8")
 
     args = argparse.Namespace(work=True, clean_orphans=False, non_interactive=True)
@@ -47,9 +47,9 @@ def _mcp_data_no_defaults() -> str:
     return json.dumps(data)
 
 
-def test_empty_when_copilot_cli_missing(tmp_dir: Path):
+def test_empty_when_copilot_cli_missing(tmp_path: Path):
     """copilot not on PATH, no local clone → empty set."""
-    ctx = _make_ctx(tmp_dir)
+    ctx = _make_ctx(tmp_path)
     with (
         patch("lib.skills.shutil.which", return_value=None),
         patch("copilot_setup.steps.plugins.link_local_plugins"),
@@ -58,9 +58,9 @@ def test_empty_when_copilot_cli_missing(tmp_dir: Path):
     assert ctx.plugin_server_names == set()
 
 
-def test_empty_when_install_fails(tmp_dir: Path):
+def test_empty_when_install_fails(tmp_path: Path):
     """copilot available but install returns None → failed → empty set."""
-    ctx = _make_ctx(tmp_dir)
+    ctx = _make_ctx(tmp_path)
 
     def _fake(args, *, check=True):
         if args == ["plugin", "list"]:
@@ -76,9 +76,9 @@ def test_empty_when_install_fails(tmp_dir: Path):
     assert ctx.plugin_server_names == set()
 
 
-def test_present_when_already_installed(tmp_dir: Path):
+def test_present_when_already_installed(tmp_path: Path):
     """Plugin shows up in 'copilot plugin list' → skipped → in the set."""
-    ctx = _make_ctx(tmp_dir)
+    ctx = _make_ctx(tmp_path)
 
     def _fake(args, *, check=True):
         if args == ["plugin", "list"]:
@@ -94,9 +94,9 @@ def test_present_when_already_installed(tmp_dir: Path):
     assert ctx.plugin_server_names == {"msx-mcp"}
 
 
-def test_present_when_fresh_install_succeeds(tmp_dir: Path):
+def test_present_when_fresh_install_succeeds(tmp_path: Path):
     """Plugin not present, install succeeds → in the set."""
-    ctx = _make_ctx(tmp_dir)
+    ctx = _make_ctx(tmp_path)
 
     def _fake(args, *, check=True):
         if args == ["plugin", "list"]:
@@ -112,12 +112,12 @@ def test_present_when_fresh_install_succeeds(tmp_dir: Path):
     assert ctx.plugin_server_names == {"msx-mcp"}
 
 
-def test_present_when_local_clone_exists(tmp_dir: Path):
+def test_present_when_local_clone_exists(tmp_path: Path):
     """Local clone detected → in the set even if copilot CLI is missing."""
     # Build a ctx with defaultPaths pointing at a fake clone
     root = Path(__file__).resolve().parent.parent
     real_data = json.loads((root / "mcp-servers.json").read_text("utf-8"))
-    clone = tmp_dir / "MSX-MCP"
+    clone = tmp_path / "MSX-MCP"
     clone.mkdir()
     (clone / ".git").mkdir()
     (clone / "dist").mkdir()
@@ -127,7 +127,7 @@ def test_present_when_local_clone_exists(tmp_dir: Path):
             s["defaultPaths"] = [str(clone)]
         else:
             s["defaultPaths"] = []
-    tmp_mcp = tmp_dir / "mcp-servers.json"
+    tmp_mcp = tmp_path / "mcp-servers.json"
     tmp_mcp.write_text(json.dumps(real_data), "utf-8")
 
     args = argparse.Namespace(work=True, clean_orphans=False, non_interactive=True)

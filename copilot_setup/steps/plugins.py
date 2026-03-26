@@ -72,11 +72,11 @@ class PluginsStep:
         # available — installed, already present, or backed by a local clone.
         # Failed installs (or copilot CLI missing) must NOT be marked, so the
         # downstream MCP build/config steps fall back to local build + config.
-        confirmed_names = set(shim_summary["plugins_installed"]) | set(shim_summary["plugins_skipped"])
+        confirmed_plugin_names = set(shim_summary["plugins_installed"]) | set(shim_summary["plugins_skipped"])
         ctx.plugin_server_names = {
             p["localServerName"]
             for p in plugins_to_install
-            if p.get("localServerName") and (p["name"] in confirmed_names or p["name"] in local_clone_map)
+            if p.get("localServerName") and (p["name"] in confirmed_plugin_names or p["name"] in local_clone_map)
         }
 
         for name, status, detail in shim.items:
