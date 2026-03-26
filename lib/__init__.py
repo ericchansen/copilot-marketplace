@@ -1,1 +1,0 @@
-# Copilot Config setup library
