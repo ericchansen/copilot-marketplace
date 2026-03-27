@@ -6,11 +6,11 @@ Personal configuration source for [copilot-setup](https://github.com/ericchansen
 
 | File | Purpose |
 |------|---------|
-| `mcp-servers.json` | MCP server definitions (Azure, Context7, Playwright, etc.) |
-| `lsp-servers.json` | LSP server definitions (TypeScript, Python, Rust) |
-| `config.portable.json` | Portable Copilot settings (model, theme, etc.) |
-| `copilot-instructions.md` | Global Copilot instructions |
-| `skills/` | Personal/generic skills (9 skills) |
+| `.copilot/mcp.json` | MCP server definitions (Azure, Context7, Playwright, etc.) |
+| `.copilot/lsp-servers.json` | LSP server definitions (TypeScript, Python, Rust) |
+| `.copilot/config.portable.json` | Portable Copilot settings (model, theme, etc.) |
+| `.copilot/copilot-instructions.md` | Global Copilot instructions |
+| `.copilot/skills/` | Personal/generic skills (9 skills) |
 
 ## Usage
 
@@ -40,6 +40,6 @@ Then run `copilot-setup` — it discovers, merges, and deploys everything.
 
 ## Adding Content
 
-- **New MCP server**: Add to `servers` array in `mcp-servers.json`
-- **New skill**: Create `skills/{name}/SKILL.md` with YAML frontmatter
-- **Settings**: Edit `config.portable.json` for model, theme, etc.
+- **New MCP server**: Add to `mcpServers` in `.copilot/mcp.json`
+- **New skill**: Create `.copilot/skills/{name}/SKILL.md` with YAML frontmatter
+- **Settings**: Edit `.copilot/config.portable.json` for model, theme, etc.

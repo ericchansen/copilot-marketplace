@@ -7,15 +7,15 @@ skills, instructions, and portable settings. This is a **data-only** repo — no
 
 ## Structure
 
-- `mcp-servers.json` — Personal MCP servers (additive merge with other sources)
-- `lsp-servers.json` — LSP server definitions (first-wins)
-- `config.portable.json` — Portable Copilot settings (first-wins)
-- `copilot-instructions.md` — Global instructions (first-wins)
-- `skills/` — Each subdirectory is a skill with SKILL.md
+- `.copilot/mcp.json` — Personal MCP servers (additive merge with other sources)
+- `.copilot/lsp-servers.json` — LSP server definitions (first-wins)
+- `.copilot/config.portable.json` — Portable Copilot settings (first-wins)
+- `.copilot/copilot-instructions.md` — Global instructions (first-wins)
+- `.copilot/skills/` — Each subdirectory is a skill with SKILL.md
 
 ## Adding Content
 
-- **New MCP server**: Add to `servers` array in `mcp-servers.json`
-- **New skill**: Create `skills/{name}/SKILL.md` with YAML frontmatter
-- **Settings**: Edit `config.portable.json` for model, theme, etc.
-- **Instructions**: Edit `copilot-instructions.md` for global behavior
+- **New MCP server**: Add to `mcpServers` in `.copilot/mcp.json`
+- **New skill**: Create `.copilot/skills/{name}/SKILL.md` with YAML frontmatter
+- **Settings**: Edit `.copilot/config.portable.json` for model, theme, etc.
+- **Instructions**: Edit `.copilot/copilot-instructions.md` for global behavior
