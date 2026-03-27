@@ -10,3 +10,7 @@ __pycache__/
 Thumbs.db
 
 local.json
+
+# Legacy copilot-setup engine artifacts
+.mcp-paths.json
+external/
