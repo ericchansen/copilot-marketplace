@@ -1,0 +1,9 @@
+{
+  "version": "1.0.0",
+  "name": "copilot-config",
+  "description": "Personal Copilot CLI skills and configuration",
+  "author": {
+    "name": "copilot-config"
+  },
+  "keywords": []
+}
