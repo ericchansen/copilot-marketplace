@@ -1,8 +1,9 @@
 ---
 name: edge-browser
 description: |
-  Hijack a running Microsoft Edge instance with a specific user profile (e.g., corp, managed tenant,
-  personal) by killing Edge, relaunching with --remote-debugging-port, and connecting Playwright.
+  Restart Microsoft Edge with a specific user profile (e.g., corp, managed tenant, personal) and
+  remote debugging enabled, then connect Playwright to Edge for interactive control.
+  Kills all existing Edge processes, relaunches with --remote-debugging-port on the chosen profile.
   This is a LAST RESORT for profile-specific browsing — prefer Playwright MCP, clean_browser, or
   Chrome DevTools MCP for generic browsing tasks. Only use this skill when the user explicitly needs
   a particular Edge profile's cookies/auth (e.g., "use my work Edge profile", "open Edge with my
