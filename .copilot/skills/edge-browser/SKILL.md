@@ -1,11 +1,12 @@
 ---
 name: edge-browser
 description: |
-  Launch and connect to Microsoft Edge with a specific profile for interactive browser collaboration.
-  Use when the user wants to browse a website together, inspect a web form, navigate a portal (MSX,
-  Azure, Foundry, etc.), stage demo tabs, or do anything that requires Playwright control of Edge.
-  Triggers include "open Edge", "browse together", "let's look at", "open the portal", "inspect the form",
-  "navigate to", "stage tabs", "connect to Edge", or any request to interactively use a browser.
+  Hijack a running Microsoft Edge instance with a specific user profile (e.g., corp, managed tenant,
+  personal) by killing Edge, relaunching with --remote-debugging-port, and connecting Playwright.
+  This is a LAST RESORT for profile-specific browsing — prefer Playwright MCP, clean_browser, or
+  Chrome DevTools MCP for generic browsing tasks. Only use this skill when the user explicitly needs
+  a particular Edge profile's cookies/auth (e.g., "use my work Edge profile", "open Edge with my
+  managed tenant profile", "hijack Edge", "connect to my corp Edge").
 license: MIT
 allowed-tools: Bash, Playwright
 ---
