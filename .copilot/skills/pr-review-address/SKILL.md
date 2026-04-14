@@ -254,7 +254,6 @@ gh api graphql -f body="Fixed in `abc123`"
 - **DO NOT** leave comments unacknowledged — silence looks like ignoring feedback.
 - **DO NOT** leave threads unresolved after replying — reply + resolve is the complete action. Even pushbacks get resolved; your explanation is the resolution.
 - **DO NOT** make unrelated changes while addressing review feedback.
-- **DO NOT** squash review fixes into previous commits — keep them as separate commits so the reviewer can see what changed.
 
 ## Edge Cases
 
