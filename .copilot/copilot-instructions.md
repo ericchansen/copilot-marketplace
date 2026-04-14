@@ -7,7 +7,7 @@
 | **Never commit broken code** | Linter + full test suite must pass first |
 | **⚠️ RUN E2E TESTS LOCALLY** | **MANDATORY before ANY push** — no exceptions |
 | **🛑 NEVER PUSH WITHOUT REVIEW** | **User must review `git diff` before ANY push** — invoke `git-safety-scan` skill |
-| **🚫 NEVER push to main/master** | **HARD BLOCK: No git push to main/master on ANY remote, for ANY reason, even "trivial" changes, even deprecated repos. No exceptions. Always use a feature branch + PR.** |
+| **🚫 NEVER work on main/master** | **HARD BLOCK: No commits, edits, or staged files on main/master — locally OR remotely. Always use a git worktree. No exceptions.** |
 | **Commit locally by default** | Only push when explicitly asked |
 | **Cite everything** | Every stat/claim needs a clickable URL |
 | **Challenge assumptions** | Question approaches, push back with evidence |
@@ -26,17 +26,18 @@
 
 ### Branching
 - **🔐 When git/gh operations fail, check for multiple GitHub accounts** — run `gh auth status`. There may be multiple accounts configured (e.g., work EMU + personal). The wrong active account causes "Repository not found", 403s, SAML errors, and API failures that look like permission issues. If the active account doesn't match the repo, switch: `gh auth switch --user <account>`.
-- **🚫 NEVER push to `main` or `master` on ANY remote** — this is an absolute rule with ZERO exceptions
+- **🚫 NEVER work on `main` or `master` — locally OR remotely** — this is an absolute rule with ZERO exceptions
+  - No commits, no edits, no staged files, no pushes on `main`/`master`
   - Not even for "small" changes, README updates, redirects, or deprecated repos
-  - Not even if the user's request implies it — create a branch and PR instead
-  - If you catch yourself about to run `git push <remote> ...:main` or `git push <remote> ...:master` — **STOP**
-- **🔀 ALWAYS create a feature branch BEFORE making any changes** — this is your FIRST step, not an afterthought
+  - Not even if the user's request implies it — create a worktree and PR instead
+  - If you catch yourself about to edit files while on `main`/`master` — **STOP**
+- **🌳 Use git worktrees as the PRIMARY branching mechanism** — this is your FIRST step, not an afterthought
   - Check `git branch --show-current` at the start of every task
-  - If on `main`/`master`, create a branch immediately: `git checkout -b <type>/<short-description>`
-  - Do NOT make edits, stage files, or commit while on `main`/`master`
+  - If on `main`/`master`, fetch and create a worktree from the latest remote: `git fetch origin && git worktree add ../repo-name-branch-name -b <type>/<short-description> origin/main`
+  - Work entirely inside the new worktree directory — `main` stays clean and untouched
+  - This prevents dirty `main` checkouts, avoids accidental commits on main, and lets the user keep their main worktree pristine
 - Follow repo-specific instructions (AGENTS.md, CONTRIBUTING.md, etc.)
-- If no repo guidance exists, use feature branches: `git checkout -b <type>/<short-description>`
-- **Git worktrees** — use `git worktree add` when working on multiple branches simultaneously or when the user needs to preserve their current working tree (e.g., they have uncommitted changes on another branch)
+- If no repo guidance exists, use worktrees with feature branches: `git fetch origin && git worktree add ../repo-name-feature -b <type>/<short-description> origin/main`
 
 ### During Development
 - Run tests after each logical change—catch failures early
