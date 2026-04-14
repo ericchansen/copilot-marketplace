@@ -146,6 +146,10 @@ git -c credential.helper="!gh auth git-credential" pull
 - Use `git merge --ff-only` for local merges
 - If a PR, prefer **"Rebase and merge"** — never "Create a merge commit"
 - Every commit should be a clean, readable unit
+- **Clean up commits on your feature branch before merging:**
+  - Use `git commit --amend` or interactive rebase (`git rebase -i` with `fixup`/`squash`) to consolidate WIP commits instead of stacking fixups that touch the same file
+  - If the branch is already pushed, use `--force-with-lease` after rewriting history
+  - One logical change = one commit — the history should read "add feature," "add tests," "update docs" — not "add docs," "fix typo in docs," "remove admonition from docs"
 
 ## Environment & Azure
 
