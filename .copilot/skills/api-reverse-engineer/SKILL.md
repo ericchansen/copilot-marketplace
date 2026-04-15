@@ -34,11 +34,17 @@ page or installing extensions.
 
 ### Step-by-Step Workflow
 
+> **Note:** The step-by-step snippets below use top-level `await` with CommonJS `require()` for
+> brevity and won't run directly as `node script.js`. See the
+> [CDP Helper Pattern](#the-cdp-helper-pattern) below for a complete, self-contained script that
+> combines all steps with proper `send()`, `fs`, and async IIFE scaffolding.
+
 #### 1. Connect to the Target Page
 
 ```javascript
 const WebSocket = require('ws');
 const http = require('http');
+const fs = require('fs');
 
 function httpGet(url) {
   return new Promise((resolve, reject) => {
@@ -110,6 +116,10 @@ await evalJS(`document.querySelector('button.submit').click()`);
 
 #### 4. Harvest the Captured Payload
 
+> **⚠️ Security:** Captured headers typically include Bearer tokens, cookies, and session
+> credentials. Treat output files as secrets — write to a temp directory, never commit them,
+> and delete after use.
+
 ```javascript
 // Wait for the API call
 await new Promise(r => setTimeout(r, 10000));
@@ -119,7 +129,7 @@ const post = captured.find(c => c.postData && c.postData.length > 50);
 if (post) {
   fs.writeFileSync('captured_payload.json', post.postData);
   fs.writeFileSync('captured_headers.json', JSON.stringify(post.headers, null, 2));
-  console.log('PAYLOAD CAPTURED!', post.postData.length, 'bytes');
+  console.log('PAYLOAD CAPTURED!', post.url, post.postData.length, 'bytes');
 }
 ```
 
@@ -130,8 +140,9 @@ if (post) {
 $payload = Get-Content 'captured_payload.json' | ConvertFrom-Json
 $payload.title = 'New Title'
 $headers = Get-Content 'captured_headers.json' | ConvertFrom-Json
+$url = 'https://your-api-domain.com/endpoint'  # from the captured request's URL
 
-$result = Invoke-RestMethod -Uri $post.url -Method Post `
+$result = Invoke-RestMethod -Uri $url -Method Post `
   -Headers @{ Authorization = $headers.Authorization } `
   -Body ($payload | ConvertTo-Json -Depth 5) `
   -ContentType 'application/json'
@@ -195,6 +206,8 @@ Reusable Node.js scaffolding for any interception task:
 const WebSocket = require('ws');
 const http = require('http');
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 function httpGet(u) {
   return new Promise((r, j) => {
@@ -252,8 +265,8 @@ function httpGet(u) {
       // === HARVEST ===
       const post = captured.find(c => c.postData && c.postData.length > 50);
       if (post) {
-        fs.writeFileSync(process.env.TEMP + '/captured_payload.json', post.postData);
-        fs.writeFileSync(process.env.TEMP + '/captured_headers.json',
+        fs.writeFileSync(path.join(os.tmpdir(), 'captured_payload.json'), post.postData);
+        fs.writeFileSync(path.join(os.tmpdir(), 'captured_headers.json'),
           JSON.stringify(post.headers, null, 2));
         console.log('Captured!', post.postData.length, 'bytes, status:', post.status);
       }
