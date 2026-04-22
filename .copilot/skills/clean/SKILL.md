@@ -2,7 +2,7 @@
 name: clean
 description: 'Post-merge git cleanup — checkout main/master, pull latest, delete merged local branches, prune remote-tracking branches, verify clean working state. Use when user says "clean up", "rebased and merged", "merged, clean up", "cleanup branches", "back to main", or any variant of post-merge housekeeping.'
 license: MIT
-allowed-tools: Bash
+allowed-tools: Bash, PowerShell
 ---
 
 # Post-Merge Git Cleanup
