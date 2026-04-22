@@ -26,6 +26,8 @@
 4. Show `git diff origin/main..HEAD --stat` to the user — they must review and explicitly confirm before push
 5. Push to a feature branch, never directly to `main`/`master`. Offer to create a PR afterward.
 
+Do not merge PRs — only the user merges.
+
 ### Clean Commit History
 
 - Prefer linear history — `git rebase`, `git merge --ff-only`, "Rebase and merge" for PRs
