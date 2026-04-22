@@ -10,7 +10,7 @@ Personal configuration source for [copilot-setup](https://github.com/ericchansen
 | `.copilot/lsp-servers.json` | LSP server definitions (TypeScript, Python, Rust) |
 | `.copilot/config.portable.json` | Portable Copilot settings (model, theme, etc.) |
 | `.copilot/copilot-instructions.md` | Global Copilot instructions |
-| `.copilot/skills/` | Personal/generic skills (9 skills) |
+| `.copilot/skills/` | Personal/generic skills (7 skills) |
 
 ## Usage
 
@@ -28,15 +28,15 @@ Then run `copilot-setup` — it discovers, merges, and deploys everything.
 
 | Skill | Purpose |
 |-------|---------|
+| api-reverse-engineer | Reverse-engineer undocumented web APIs via CDP |
 | clean | Post-merge git cleanup |
-| edge-browser | Launch Edge for browser collaboration |
+| doc-generator | Markdown to PDF/DOCX conversion |
+| edge-browser | Launch Edge with specific profile for authenticated browsing |
 | gh-body-safe | Safe `gh` commands with `--body-file` |
 | git-commit | Conventional commit message generation |
 | git-safety-scan | Pre-push secret/PII scanning |
-| mcp-reauth | MCP server OAuth token management |
 | pr-review-address | Address PR review feedback |
 | release-announce | Draft release announcements for Teams |
-| summon-the-knights-of-the-round-table | Multi-model brainstorming |
 
 ## Adding Content
 
