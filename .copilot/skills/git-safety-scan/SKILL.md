@@ -116,22 +116,7 @@ git diff --staged -- "*.md" "*.docx"
 
 ## User Blocklist Setup
 
-Users can create `~/.copilot/sensitive-terms.txt` with terms to always block:
-
-```
-# Customer names
-Acme Corp
-Globex Industries
-
-# Project codenames
-project-phoenix
-operation-sunrise
-
-# Internal team names
-tiger-team-alpha
-```
-
-Lines starting with `#` are comments. One term per line, case-insensitive matching.
+Users can create `~/.copilot/sensitive-terms.txt` with one term per line (case-insensitive). Lines starting with `#` are comments.
 
 ## Critical Rules
 
