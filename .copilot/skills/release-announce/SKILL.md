@@ -71,24 +71,23 @@ Do NOT send until the user explicitly confirms (e.g., "send it", "yes", "go").
 
 ### Step 4: Resolve the channel
 
-Use the `teams` skill workflow to resolve the channel:
+Use the Teams MCP tools to resolve the channel:
 
-1. Try `python scripts/cache-manager.py resolve "<channel or team name>"` from the teams skill directory
-2. If not cached, use MCP `ListTeams` → `ListChannels` to find it
-3. Cache the result via `python scripts/cache-manager.py add-channel ...`
+1. List teams: use the Teams MCP `ListTeams` tool to find the target team by name
+2. List channels: use `ListChannels` for that team to find the target channel
+3. Note the `teamId` and `channelId` for posting
 
 ### Step 5: Send
 
 1. Write the markdown body to a temp file
-2. Validate: `python -m scripts.rich.validate_message --body <body>` (from the teams skill)
-3. Scan for credentials: `python -m scripts.rich.credential_scanner --file <temp file>`
-4. Convert markdown to HTML and build the Graph API payload (with `subject` field)
-5. Ensure `az CLI` is authenticated as the correct corporate identity (check `az account show`)
-6. POST via Graph API: `POST /teams/{teamId}/channels/{channelId}/messages` with `subject` and `body.contentType: html`
-7. Clean up temp files
-8. Report: message ID and confirmation
+2. Scan the body for credentials (API keys, tokens) — block if found
+3. Convert markdown to HTML and build the Graph API payload (with `subject` field)
+4. Ensure `az CLI` is authenticated as the correct corporate identity (check `az account show`)
+5. POST via Graph API: `POST /teams/{teamId}/channels/{channelId}/messages` with `subject` and `body.contentType: html`
+6. Clean up temp files
+7. Report: message ID and confirmation
 
-**Auth note:** The `az CLI` may be signed into a managed environment or wrong tenant. If Graph API returns 403 "AclCheckFailed", switch to the corporate account:
+**Auth note:** If Graph API returns 403 "AclCheckFailed", switch to the corporate account:
 ```powershell
 az account set --subscription "<corporate subscription name>"
 ```
@@ -132,5 +131,4 @@ them into action buckets with a prioritized action list.
 
 ## Composes With
 
-- **teams** — channel resolution, caching, HTML conversion, validation
 - **git-commit** — often invoked right before this skill (commit → tag → release → announce)
