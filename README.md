@@ -1,45 +1,63 @@
 # copilot-config
 
-Personal configuration source for [copilot-setup](https://github.com/ericchansen/copilot-setup).
+A Copilot CLI plugin with personal skills, MCP servers, and LSP servers for git workflow,
+document generation, API reverse-engineering, PR review, and developer productivity.
 
-## Contents
+## Install
 
-| File | Purpose |
-|------|---------|
-| `.copilot/mcp.json` | MCP server definitions (Azure, Context7, Playwright, etc.) |
-| `.copilot/lsp-servers.json` | LSP server definitions (TypeScript, Python, Rust) |
-| `.copilot/config.portable.json` | Portable Copilot settings (model, theme, etc.) |
-| `.copilot/copilot-instructions.md` | Global Copilot instructions |
-| `.copilot/skills/` | Personal/generic skills (7 skills) |
-
-## Usage
-
-Register this as a config source in `~/.copilot/config-sources.json`:
-
-```json
-[
-  {"name": "personal", "path": "~/repos/copilot-config"}
-]
+```bash
+copilot plugin install ericchansen/copilot-config
 ```
 
-Then run `copilot-setup` — it discovers, merges, and deploys everything.
+Verify:
+
+```bash
+copilot plugin list
+```
 
 ## Skills
 
-| Skill | Purpose |
-|-------|---------|
-| api-reverse-engineer | Reverse-engineer undocumented web APIs via CDP |
-| clean | Post-merge git cleanup |
-| doc-generator | Markdown to PDF/DOCX conversion |
-| edge-browser | Launch Edge with specific profile for authenticated browsing |
-| gh-body-safe | Safe `gh` commands with `--body-file` |
-| git-commit | Conventional commit message generation |
-| git-safety-scan | Pre-push secret/PII scanning |
-| pr-review-address | Address PR review feedback |
-| release-announce | Draft release announcements for Teams |
+| Skill | Triggers | Purpose |
+|-------|----------|---------|
+| **git-commit** | `/commit`, "commit changes", "push code" | Conventional commit messages with intelligent staging |
+| **git-safety-scan** | Automatic before push | Scans for secrets, PII, and custom blocklist terms |
+| **clean** | "clean up", "merged, clean up", "back to main" | Post-merge branch cleanup and next-steps |
+| **gh-body-safe** | `gh pr create`, `gh issue create` | PowerShell-safe `--body-file` for `gh` CLI |
+| **pr-review-address** | "address PR comments", "fix review" | Categorize, fix, reply to, and resolve PR feedback |
+| **doc-generator** | "generate PDF", "create Word doc" | Markdown → PDF/DOCX via Playwright + python-docx |
+| **api-reverse-engineer** | "reverse engineer", "sniff the API" | Intercept browser network traffic via CDP |
+| **edge-browser** | Profile-specific browsing needs | Launch Edge with debug port for authenticated sessions |
+| **release-announce** | "announce release", "post to Teams" | Draft and send release announcements to Teams channels |
+
+## MCP Servers
+
+| Server | Type | Purpose |
+|--------|------|---------|
+| azure-mcp | stdio | Azure resource management via `@azure/mcp` |
+| context7 | remote | Library documentation lookup via Context7 |
+| msft-learn | remote | Microsoft Learn documentation search |
+| playwright | stdio | Browser automation via Playwright MCP |
+| chrome-devtools | stdio | Chrome DevTools Protocol access |
+
+## LSP Servers
+
+| Server | Languages | Command |
+|--------|-----------|---------|
+| typescript | `.ts`, `.tsx`, `.js`, `.jsx` | `typescript-language-server --stdio` |
+| python | `.py` | `pyright-langserver --stdio` |
+| rust | `.rs` | `rust-analyzer` |
+
+## Extras
+
+The `extras/` directory contains files that the plugin system cannot deploy automatically:
+
+| File | Purpose | Manual install |
+|------|---------|----------------|
+| `copilot-instructions.md` | Global behavioral instructions (git workflow, security, verification) | Copy to `~/.copilot/copilot-instructions.md` |
+| `config.portable.json` | Personal settings (model, theme, reasoning effort) | Merge into `~/.copilot/config.json` |
 
 ## Adding Content
 
-- **New MCP server**: Add to `mcpServers` in `.copilot/mcp.json`
-- **New skill**: Create `.copilot/skills/{name}/SKILL.md` with YAML frontmatter
-- **Settings**: Edit `.copilot/config.portable.json` for model, theme, etc.
+- **New skill**: Create `skills/{name}/SKILL.md` with YAML frontmatter
+- **New MCP server**: Add to `mcpServers` in `.mcp.json`
+- **New LSP server**: Add to `lspServers` in `lsp.json`

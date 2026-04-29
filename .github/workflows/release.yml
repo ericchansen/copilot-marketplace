@@ -17,7 +17,7 @@ jobs:
       - name: Verify tag matches plugin.json
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
-          PLUGIN_VERSION=$(jq -r .version .copilot/plugin.json)
+          PLUGIN_VERSION=$(jq -r .version plugin.json)
           if [ "$TAG_VERSION" != "$PLUGIN_VERSION" ]; then
             echo "::error::Tag $GITHUB_REF_NAME doesn't match plugin.json version $PLUGIN_VERSION"
             exit 1

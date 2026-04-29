@@ -2,20 +2,36 @@
 
 ## Repository Purpose
 
-Personal configuration source for copilot-setup. Contains MCP servers, LSP servers,
-skills, instructions, and portable settings. This is a **data-only** repo — no code.
+A **Copilot CLI plugin** providing personal skills, MCP servers, and LSP servers.
+Install with `copilot plugin install ericchansen/copilot-config`.
 
-## Structure
+## Plugin Structure
 
-- `.copilot/mcp.json` — Personal MCP servers (additive merge with other sources)
-- `.copilot/lsp-servers.json` — LSP server definitions (first-wins)
-- `.copilot/config.portable.json` — Portable Copilot settings (first-wins)
-- `.copilot/copilot-instructions.md` — Global instructions (first-wins)
-- `.copilot/skills/` — Each subdirectory is a skill with SKILL.md
+```
+plugin.json          — Plugin manifest (name, version, component paths)
+.mcp.json            — MCP server definitions (Azure, Context7, Playwright, etc.)
+lsp.json             — LSP server definitions (TypeScript, Python, Rust)
+skills/              — Each subdirectory is a skill with SKILL.md
+extras/              — Non-plugin files (instructions, settings) for manual install
+LICENSE              — MIT
+```
 
 ## Adding Content
 
-- **New MCP server**: Add to `mcpServers` in `.copilot/mcp.json`
-- **New skill**: Create `.copilot/skills/{name}/SKILL.md` with YAML frontmatter
-- **Settings**: Edit `.copilot/config.portable.json` for model, theme, etc.
-- **Instructions**: Edit `.copilot/copilot-instructions.md` for global behavior
+- **New skill**: Create `skills/{name}/SKILL.md` with YAML frontmatter (`name`, `description`, `license`, `allowed-tools`)
+- **New MCP server**: Add to `mcpServers` in `.mcp.json`
+- **New LSP server**: Add to `lspServers` in `lsp.json`
+- **Version bump**: Update `version` in `plugin.json`, tag, push
+
+## Skill YAML Frontmatter
+
+Every `SKILL.md` must have:
+
+```yaml
+---
+name: my-skill
+description: 'Brief description with trigger words'
+license: MIT
+allowed-tools: Bash, PowerShell
+---
+```
