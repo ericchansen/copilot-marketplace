@@ -2,6 +2,7 @@
 name: release-announce
 description: 'Draft and post a release announcement to a Teams channel. Reads CHANGELOG.md and/or GitHub release notes, drafts a concise channel post, shows a preview for approval, then sends via Graph API with a proper subject line. Use when user says "announce release", "post release to Teams", "release announcement", "share release notes", or any variant of publishing a release update to a Teams channel.'
 license: MIT
+allowed-tools: Bash, PowerShell
 ---
 
 # Release Announcement Skill

@@ -1,0 +1,110 @@
+name: Validate
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate plugin.json
+        run: |
+          if [ ! -f plugin.json ]; then
+            echo "::error::plugin.json not found at repo root"
+            exit 1
+          fi
+          jq empty plugin.json || { echo "::error::plugin.json is not valid JSON"; exit 1; }
+          NAME=$(jq -r .name plugin.json)
+          if [ -z "$NAME" ] || [ "$NAME" = "null" ]; then
+            echo "::error::plugin.json missing required 'name' field"
+            exit 1
+          fi
+          VERSION=$(jq -r .version plugin.json)
+          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+            echo "::error::plugin.json missing required 'version' field"
+            exit 1
+          fi
+          echo "✓ plugin.json valid (name: $NAME, version: $VERSION)"
+
+      - name: Validate .mcp.json
+        run: |
+          if [ -f .mcp.json ]; then
+            jq empty .mcp.json || { echo "::error::.mcp.json is not valid JSON"; exit 1; }
+            echo "✓ .mcp.json valid ($(jq '.mcpServers | length' .mcp.json) servers)"
+          fi
+
+      - name: Validate lsp.json
+        run: |
+          if [ -f lsp.json ]; then
+            jq empty lsp.json || { echo "::error::lsp.json is not valid JSON"; exit 1; }
+            echo "✓ lsp.json valid ($(jq '.lspServers | length' lsp.json) servers)"
+          fi
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          errors=0
+          for skill_dir in skills/*/; do
+            skill_file="$skill_dir/SKILL.md"
+            if [ ! -f "$skill_file" ]; then
+              echo "::warning::$skill_dir missing SKILL.md"
+              continue
+            fi
+            # Check YAML frontmatter exists (starts with ---)
+            if ! head -1 "$skill_file" | grep -q '^---'; then
+              echo "::error::$skill_file missing YAML frontmatter"
+              errors=$((errors + 1))
+              continue
+            fi
+            # Extract frontmatter and check for name field
+            frontmatter=$(sed -n '/^---$/,/^---$/p' "$skill_file" | sed '1d;$d')
+            if ! echo "$frontmatter" | grep -q '^name:'; then
+              echo "::error::$skill_file frontmatter missing 'name' field"
+              errors=$((errors + 1))
+            fi
+            if ! echo "$frontmatter" | grep -q '^description:'; then
+              echo "::error::$skill_file frontmatter missing 'description' field"
+              errors=$((errors + 1))
+            fi
+            if ! echo "$frontmatter" | grep -q '^license:'; then
+              echo "::error::$skill_file frontmatter missing 'license' field"
+              errors=$((errors + 1))
+            fi
+            if ! echo "$frontmatter" | grep -q '^allowed-tools:'; then
+              echo "::error::$skill_file frontmatter missing 'allowed-tools' field"
+              errors=$((errors + 1))
+            fi
+          done
+          if [ $errors -gt 0 ]; then
+            echo "::error::$errors frontmatter error(s) found"
+            exit 1
+          fi
+          echo "✓ All SKILL.md files have valid frontmatter"
+
+      - name: Validate plugin.json paths exist
+        run: |
+          errors=0
+          skills_path=$(jq -r '.skills // empty' plugin.json)
+          mcp_path=$(jq -r '.mcpServers // empty' plugin.json)
+          lsp_path=$(jq -r '.lspServers // empty' plugin.json)
+
+          if [ -n "$skills_path" ] && [ ! -d "$skills_path" ]; then
+            echo "::error::skills path '$skills_path' does not exist"
+            errors=$((errors + 1))
+          fi
+          if [ -n "$mcp_path" ] && [ ! -f "$mcp_path" ]; then
+            echo "::error::mcpServers path '$mcp_path' does not exist"
+            errors=$((errors + 1))
+          fi
+          if [ -n "$lsp_path" ] && [ ! -f "$lsp_path" ]; then
+            echo "::error::lspServers path '$lsp_path' does not exist"
+            errors=$((errors + 1))
+          fi
+          if [ $errors -gt 0 ]; then
+            exit 1
+          fi
+          echo "✓ All plugin.json component paths exist"
