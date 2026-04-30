@@ -3,7 +3,11 @@
 ## Repository Purpose
 
 A **Copilot CLI plugin** providing personal skills, MCP servers, and LSP servers.
-Install with `copilot plugin install ericchansen/copilot-config`.
+
+```bash
+copilot plugin marketplace add ericchansen/copilot-config
+copilot plugin install copilot-config@copilot-config
+```
 
 ## Plugin Structure
 

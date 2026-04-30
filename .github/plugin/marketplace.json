@@ -1,0 +1,19 @@
+{
+  "name": "copilot-config",
+  "owner": {
+    "name": "Eric Hansen",
+    "email": "ericchansen@gmail.com"
+  },
+  "metadata": {
+    "description": "Personal Copilot CLI plugins",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "copilot-config",
+      "source": ".",
+      "description": "Personal skills, MCP servers, and LSP servers for git workflow, document generation, API reverse-engineering, PR review, and developer productivity",
+      "version": "2.0.0"
+    }
+  ]
+}
