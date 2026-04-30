@@ -6,13 +6,23 @@ document generation, API reverse-engineering, PR review, and developer productiv
 ## Install
 
 ```bash
-copilot plugin install ericchansen/copilot-config
+# 1. Register the marketplace (one-time)
+copilot plugin marketplace add ericchansen/copilot-config
+
+# 2. Install the plugin
+copilot plugin install copilot-config@ericchansen-plugins
 ```
 
 Verify:
 
 ```bash
 copilot plugin list
+```
+
+Update later:
+
+```bash
+copilot plugin update copilot-config@ericchansen-plugins
 ```
 
 ## Skills
