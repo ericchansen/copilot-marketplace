@@ -36,7 +36,7 @@ Do not merge PRs — only the user merges.
 
 ### Creating PRs and Issues
 
-Use the `gh-body-safe` skill for any `gh` command with `--body` — PowerShell mangles backticks. The skill writes to a temp file and uses `--body-file` instead.
+Use the `gh-writer` skill for any `gh` command that writes content (PRs, issues, comments). It prevents PowerShell encoding corruption and enforces content quality (no machine-specific paths, structured sections, generic repro steps).
 
 ### Multi-Account Git Authentication
 
