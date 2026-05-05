@@ -50,6 +50,7 @@ Multiple GitHub accounts are configured (enterprise EMU + personal). When any gi
 - **Docker**: Never stop, remove, or modify containers from other projects. If port conflicts occur, change the current project's ports.
 - **Web dev servers**: Track which directory is served on which port. With worktrees, confirm the user's browser is hitting the server with the latest changes, not a stale instance.
 - **Azure naming**: `<type>-<app>-<env>` (e.g., `rg-itemwise-prod`). Never use bare `prod` or `dev`.
+- **Azure demo subscriptions**: MCAPS Managed Environment subs `ME-MngEnvMCAP529863-erichansen-1` and `ME-MngEnvMCAP529863-erichansen-2`. Always check these first for demo deployments. Find with: `az account list --query "[?contains(name,'ME-MngEnv')]"`
 
 ## Long-Running Compute
 
