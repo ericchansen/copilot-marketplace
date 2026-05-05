@@ -32,7 +32,7 @@ copilot plugin update copilot-config@copilot-config
 | **git-commit** | `/commit`, "commit changes", "push code" | Conventional commit messages with intelligent staging |
 | **git-safety-scan** | Automatic before push | Scans for secrets, PII, and custom blocklist terms |
 | **clean** | "clean up", "merged, clean up", "back to main" | Post-merge branch cleanup and next-steps |
-| **gh-body-safe** | `gh pr create`, `gh issue create` | PowerShell-safe `--body-file` for `gh` CLI |
+| **gh-writer** | `gh pr create`, `gh issue create`, `gh issue comment` | Encoding-safe + content quality for all GitHub writes |
 | **pr-review-address** | "address PR comments", "fix review" | Categorize, fix, reply to, and resolve PR feedback |
 | **doc-generator** | "generate PDF", "create Word doc" | Markdown → PDF/DOCX via Playwright + python-docx |
 | **api-reverse-engineer** | "reverse engineer", "sniff the API" | Intercept browser network traffic via CDP |
