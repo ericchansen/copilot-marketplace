@@ -9,7 +9,26 @@ allowed-tools: Bash, PowerShell
 
 Exercise engineering judgment on every comment — don't fix blindly.
 
-## Step 1: Gather and Categorize Feedback
+## Step 1: Rebase onto Base Branch (GATE)
+
+**Do this first — before reading feedback or making any changes.** Fixing code on a stale branch creates merge conflicts that waste time.
+
+Check if the PR branch is behind its base (`main`/`master`). If behind, rebase now:
+
+```bash
+git fetch origin
+git rebase origin/<base-branch>
+```
+
+If there are conflicts, resolve them, run build + tests to verify nothing broke, then force-push:
+
+```bash
+git push --force-with-lease
+```
+
+Do NOT proceed to Step 2 until the branch is current with the base branch.
+
+## Step 2: Gather and Categorize Feedback
 
 Fetch all review threads and PR comments. Categorize each:
 - 🔴 **Bug/Security** — must fix
@@ -20,11 +39,11 @@ Fetch all review threads and PR comments. Categorize each:
 
 For non-trivial comments, read the surrounding code and check best practices before acting.
 
-## Step 2: Make Changes
+## Step 3: Make Changes
 
 For 🔴 and 🟡 items: fix, run build + tests. **Amend or rebase** existing commits rather than adding new fixup commits — the PR history should stay clean. Use `git commit --amend` or `git rebase -i` with `fixup`/`squash`, then `--force-with-lease` to push.
 
-## Step 3: Reply to Every Thread
+## Step 4: Reply to Every Thread
 
 **Every piece of feedback gets a reply.** Use `addPullRequestReviewThreadReply` for review threads (NOT `gh pr comment`, which adds a general conversation comment):
 
@@ -47,7 +66,7 @@ gh api graphql `
 - **Question**: `<Direct answer in 1-2 sentences.>`
 - **Deferred**: `Good catch. <Why out of scope>. Tracked in #<issue>.`
 
-## Step 4: Resolve Every Thread
+## Step 5: Resolve Every Thread
 
 After replying to each thread, immediately resolve it:
 
@@ -73,11 +92,11 @@ gh api graphql -f query='{ repository(owner: "OWNER", name: "REPO") {
 
 Paginate with `after: "CURSOR"` if `hasNextPage` is true.
 
-## Step 5: Fix CI and Branch Drift
+## Step 6: Verify CI
 
-Check CI status on the PR. If the branch is behind base, rebase it yourself — don't leave this for the user. Re-run validations after rebasing.
+Check CI status. If anything is failing, fix it before moving on. Always re-run build + tests after rebasing — even conflict-free rebases pull in base-branch changes that can break things.
 
-## Step 6: Push and Summarize
+## Step 7: Push and Summarize
 
 Push, verify CI passes, then report:
 - ✅ Fixed: N items | 💬 Replied: N | ❌ Pushed back: N
