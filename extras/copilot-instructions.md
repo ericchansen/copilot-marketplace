@@ -74,17 +74,21 @@ Before claiming something works, **verify the actual user experience** — not j
 - **Never claim which tools or frameworks a project uses without reading the manifest** (`package.json`, `pyproject.toml`, etc.). Don't guess from config file format.
 - The user's time is more valuable than your tool calls. Burn tokens, not patience.
 
-## OneDrive
+## File Organization
 
-Root: `C:\Users\erichansen\OneDrive - Microsoft\`
+Use the `file-organizer` skill to audit and organize the OneDrive or any local directory.
 
-Canonical top-level folders: `Accounts/`, `Internal/`, `Technical/`, `Presentations/`, `Reports/`, `Recordings/`, `Personal/`, `Agency Cowork/`, `Copilot Talk/`, `Archive/`, `Desktop/`, `Documents/`, `Pictures/`, `Screenshots/`.
+**OneDrive root:** `C:\Users\erichansen\OneDrive - Microsoft\`
+
+**Core routing rule:** Customer-specific content --> `Accounts/<name>/`. Everything else --> `Internal/<category>/`.
+Presentations and reports are NOT top-level folders -- they go under the account or program they belong to.
+
+**Technical/** is organized by technology: `GitHub Copilot/`, `MSX MCP/`, `Azure/`, `AI/`.
 
 Rules:
-- **Always use `-LiteralPath`** for any PowerShell file operation — filenames with brackets silently fail with `-Path`.
-- **Never touch `Recordings/`** — auto-synced by Teams; moving breaks the link.
-- **Propose before moving** — never move/delete files without showing a plan and getting explicit approval.
-- For detailed organization logic, invoke the `onedrive-organizer` skill.
+- **Always use `-LiteralPath`** for any PowerShell file operation -- filenames with brackets silently fail with `-Path`.
+- **Propose before moving** -- never move/delete files without showing a plan and getting explicit approval.
+- **Never touch `Recordings/`** -- auto-synced by Teams; moving breaks the link.
 
 ## Citations
 
