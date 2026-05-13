@@ -74,6 +74,18 @@ Before claiming something works, **verify the actual user experience** — not j
 - **Never claim which tools or frameworks a project uses without reading the manifest** (`package.json`, `pyproject.toml`, etc.). Don't guess from config file format.
 - The user's time is more valuable than your tool calls. Burn tokens, not patience.
 
+## OneDrive
+
+Root: `C:\Users\erichansen\OneDrive - Microsoft\`
+
+Canonical top-level folders: `Accounts/`, `Internal/`, `Technical/`, `Presentations/`, `Reports/`, `Recordings/`, `Personal/`, `Agency Cowork/`, `Copilot Talk/`, `Archive/`, `Desktop/`, `Documents/`, `Pictures/`, `Screenshots/`.
+
+Rules:
+- **Always use `-LiteralPath`** for any PowerShell file operation — filenames with brackets silently fail with `-Path`.
+- **Never touch `Recordings/`** — auto-synced by Teams; moving breaks the link.
+- **Propose before moving** — never move/delete files without showing a plan and getting explicit approval.
+- For detailed organization logic, invoke the `onedrive-organizer` skill.
+
 ## Citations
 
 Every statistic or claim needs a clickable source URL. Prefer Microsoft docs, Gartner, Forrester, peer-reviewed studies. Label projections clearly.
