@@ -102,9 +102,13 @@ if ($edgePids.Count -gt 0) {
 }
 
 # Launch with debug port + profile + restore tabs
-# NOTE: Do NOT embed quotes in --profile-directory value. Start-Process handles quoting.
-$profileDir = "Default"   # <-- from profile discovery (works with "Profile 1" too)
-Start-Process "msedge" -ArgumentList "--remote-debugging-port=9222", "--profile-directory=$profileDir", "--restore-last-session"
+# IMPORTANT: Use cmd /c with explicit quotes around the profile directory value.
+# PowerShell's Start-Process -ArgumentList splits "Profile 1" at the space,
+# causing Edge to receive --profile-directory=Profile (wrong profile) and "1"
+# as a separate argument. This silently creates a new empty profile instead
+# of using the intended one.
+$profileDir = "Default"   # <-- from profile discovery
+cmd /c "start msedge --remote-debugging-port=9222 --profile-directory=`"$profileDir`" --restore-last-session"
 
 # Wait for CDP to become available
 for ($i = 1; $i -le 15; $i++) {
@@ -189,6 +193,11 @@ Refreshing the authenticated page triggers MSAL silent token renewal.
 - **Azure Portal needs tenant parameter** for managed tenants: `?tenant=<TENANT_ID>`
 - **Port 9222 conflicts** — check with `Get-NetTCPConnection -LocalPort 9222` before launching.
   If Playwright MCP already grabbed the port, stop it first
+- **Profile directories with spaces break `Start-Process`** — PowerShell's `Start-Process
+  -ArgumentList` splits `"--profile-directory=Profile 1"` at the space, so Edge receives
+  `--profile-directory=Profile` (wrong directory) and `1` as a separate arg. This silently
+  creates a new empty profile instead of using the intended one. **Always use `cmd /c`** with
+  explicit quotes: `cmd /c "start msedge --profile-directory=`"Profile 1`""` 
 - **Prefer snapshots over screenshots** for interaction — snapshots give element refs (uid) that
   `chrome-devtools-click` and `chrome-devtools-fill` accept
 - **Chrome DevTools MCP has its own internal browser** — it does NOT connect to Edge on port 9222
