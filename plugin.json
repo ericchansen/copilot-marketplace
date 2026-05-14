@@ -1,7 +1,7 @@
 {
   "name": "copilot-config",
   "description": "Personal Copilot CLI skills, MCP servers, and LSP servers for git workflow, document generation, API reverse-engineering, PR review, and developer productivity",
-  "version": "2.0.0",
+  "version": "2.0.3",
   "author": {
     "name": "Eric Hansen",
     "url": "https://github.com/ericchansen"
