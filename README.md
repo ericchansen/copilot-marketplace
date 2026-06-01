@@ -37,6 +37,7 @@ copilot plugin update copilot-config@copilot-config
 | **doc-generator** | "generate PDF", "create Word doc" | Markdown → PDF/DOCX via Playwright + python-docx |
 | **api-reverse-engineer** | "reverse engineer", "sniff the API" | Intercept browser network traffic via CDP |
 | **edge-browser** | Profile-specific browsing needs | Launch Edge with debug port for authenticated sessions |
+| **revealjs-presentation** | "create a presentation", "make slides", "build a deck" | Generate Reveal.js HTML slide decks from topic outlines |
 | **release-announce** | "announce release", "post to Teams" | Draft and send release announcements to Teams channels |
 
 ## MCP Servers
