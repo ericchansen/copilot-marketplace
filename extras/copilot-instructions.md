@@ -59,6 +59,31 @@ Before launching any process expected to run **>10 minutes**:
 2. Confirm the process can be safely interrupted without losing completed work.
 3. Communicate estimated runtime. If unknown, run a smoke test first.
 
+## VM Change Protocol — Stateful Agent VMs
+
+When SSHing into a stateful agent VM (OpenClaw or any system that maintains its own workspace memory), changes you make are invisible to the agent until its next session boot — and even then, only if you leave a written trail. **Always** follow this sequence on a target VM that has `openclaw-vm-verify` and `openclaw-vm-changelog` installed:
+
+```bash
+# 1. Snapshot the files/units you're about to touch (keep a rollback baseline locally)
+# 2. Make the change
+# 3. Verify nothing broke
+openclaw-vm-verify
+
+# 4. Log the change (writes to today's memory/YYYY-MM-DD.md so the agent sees it)
+openclaw-vm-changelog \
+  --verify-first \
+  --summary "Short headline of what changed" \
+  --details "Multi-line body: what, why, where to roll back if needed" \
+  --tools-md "Heading|Durable fact (e.g., new path, port, service, env var)" \
+  --wake  # only for urgent changes (security, breakage, anything affecting a running task)
+```
+
+If `openclaw-vm-verify` fails, **roll back before logging**. Logging a "successful" change while verify is red poisons the agent's memory with false context.
+
+If the VM doesn't have those helpers installed yet, install them first (see the helpers' source under `~/.copilot/session-state/.../files/vm-helpers/` in any session that built them), or append a manual entry to `~/.openclaw/workspace/memory/$(date +%Y-%m-%d).md` with the heading `## HH:MM — VM-CHANGE: <summary>`.
+
+**Rule:** No silent VM changes. The agent rebuilds its mental model from files each session; if it can't read what you did, it'll work from stale assumptions.
+
 ## Verification
 
 Before claiming something works, **verify the actual user experience** — not just exit codes or health checks. Open the URL, hit the endpoints with real params, query the database, take a screenshot. An HTTP 200 or "tests pass" alone is not sufficient. If you can't fully verify, state exactly what you checked and what you couldn't.
