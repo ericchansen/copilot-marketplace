@@ -34,6 +34,7 @@ copilot plugin update copilot-config@copilot-config
 | **clean** | "clean up", "merged, clean up", "back to main" | Post-merge branch cleanup and next-steps |
 | **gh-writer** | `gh pr create`, `gh issue create`, `gh issue comment` | Encoding-safe + content quality for all GitHub writes |
 | **pr-review-address** | "address PR comments", "fix review" | Categorize, fix, reply to, and resolve PR feedback |
+| **code-review** | "review my code", "closeout review", "review this branch/PR" | Structured closeout review with verify-before-fix and rerun-until-clean |
 | **doc-generator** | "generate PDF", "create Word doc" | Markdown → PDF/DOCX via Playwright + python-docx |
 | **api-reverse-engineer** | "reverse engineer", "sniff the API" | Intercept browser network traffic via CDP |
 | **edge-browser** | Profile-specific browsing needs | Launch Edge with debug port for authenticated sessions |
