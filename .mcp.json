@@ -7,6 +7,14 @@
     "msft-learn": {
       "url": "https://learn.microsoft.com/api/mcp"
     },
+    "WebIQ-MCP": {
+      "url": "https://api.microsoft.ai/v3/mcp",
+      "type": "http",
+      "authtype": "api-key",
+      "headers": {
+        "x-apikey": "<your-api-key>"
+      }
+    },
     "playwright": {
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest", "--browser", "msedge"]

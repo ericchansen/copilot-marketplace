@@ -48,8 +48,13 @@ copilot plugin update copilot-config@copilot-config
 | azure-mcp | stdio | Azure resource management via `@azure/mcp` |
 | context7 | remote | Library documentation lookup via Context7 |
 | msft-learn | remote | Microsoft Learn documentation search |
+| WebIQ-MCP | remote | Microsoft WebIQ web, news, finance, image, video, and browse tools |
 | playwright | stdio | Browser automation via Playwright MCP |
 | chrome-devtools | stdio | Chrome DevTools Protocol access |
+
+`WebIQ-MCP` requires a Microsoft WebIQ API key. The committed `.mcp.json` uses the placeholder
+`<your-api-key>`; replace or provide that value only in your local Copilot configuration and do not
+commit a real key.
 
 ## LSP Servers
 
