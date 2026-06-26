@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": { "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}" },
+      "tools": ["*"]
+    },
+    "msft-learn": {
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp",
+      "tools": ["*"]
+    },
+    "playwright": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest", "--browser", "msedge"],
+      "tools": ["*"]
+    },
+    "chrome-devtools": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"],
+      "tools": ["*"]
+    }
+  }
+}

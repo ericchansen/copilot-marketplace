@@ -1,5 +1,5 @@
 {
-  "name": "copilot-config",
+  "name": "copilot-marketplace",
   "owner": {
     "name": "Eric Hansen",
     "email": "ericchansen@gmail.com"
@@ -10,10 +10,40 @@
   },
   "plugins": [
     {
-      "name": "copilot-config",
-      "source": ".",
-      "description": "Personal skills, MCP servers, and LSP servers for git workflow, document generation, API reverse-engineering, PR review, and developer productivity",
-      "version": "2.0.0"
+      "name": "azure-doctor",
+      "source": "plugins/azure-doctor",
+      "description": "Diagnose and fix Azure deployments across repos, CI/CD pipelines, subscriptions, and service health.",
+      "version": "1.0.0"
+    },
+    {
+      "name": "clean",
+      "source": "plugins/clean",
+      "description": "Perform post-merge git cleanup by returning to main/master, pulling latest, deleting merged branches, pruning remotes, and verifying a clean state.",
+      "version": "1.0.0"
+    },
+    {
+      "name": "doc-generator",
+      "source": "plugins/doc-generator",
+      "description": "Generate professional PDF and Word (DOCX) documents from markdown source files.",
+      "version": "1.0.0"
+    },
+    {
+      "name": "edge-browser",
+      "source": "plugins/edge-browser",
+      "description": "Launch Microsoft Edge with a specific user profile and remote debugging enabled for CDP control.",
+      "version": "1.0.0"
+    },
+    {
+      "name": "git-safety-scan",
+      "source": "plugins/git-safety-scan",
+      "description": "Scan staged changes or commits for sensitive data before pushing to remote.",
+      "version": "1.0.0"
+    },
+    {
+      "name": "pr-review-address",
+      "source": "plugins/pr-review-address",
+      "description": "Review, address, and resolve GitHub PR feedback across comments, review threads, and requested changes.",
+      "version": "1.0.0"
     }
   ]
 }

@@ -1,0 +1,12 @@
+{
+  "name": "doc-generator",
+  "description": "Generate professional PDF and Word (DOCX) documents from markdown source files.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Eric Hansen",
+    "url": "https://github.com/ericchansen"
+  },
+  "repository": "https://github.com/ericchansen/copilot-marketplace",
+  "license": "MIT",
+  "skills": "skills/"
+}

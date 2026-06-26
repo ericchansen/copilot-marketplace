@@ -4,7 +4,9 @@ Document Generator — Core patterns for Markdown → PDF & DOCX conversion.
 PDF: Markdown → HTML (via markdown lib) → PDF via Playwright + Edge headless
 DOCX: Markdown parsed line-by-line → python-docx elements
 
-Prerequisites: pip install markdown python-docx playwright && playwright install msedge
+Prerequisites (install into an isolated venv, never the global interpreter — see SKILL.md):
+    python -m venv .venv && .venv/Scripts/python -m pip install markdown python-docx playwright
+    .venv/Scripts/python -m playwright install msedge
 """
 
 import re

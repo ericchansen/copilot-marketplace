@@ -1,0 +1,21 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{ps1,psm1,psd1,py}]
+indent_size = 4
+
+# Markdown uses trailing whitespace for hard line breaks.
+[*.md]
+trim_trailing_whitespace = false
+
+# HTML signature/template files are authored verbatim.
+[*.html]
+indent_size = unset
+trim_trailing_whitespace = false
