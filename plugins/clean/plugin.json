@@ -1,0 +1,12 @@
+{
+  "name": "clean",
+  "description": "Perform post-merge git cleanup by returning to main/master, pulling latest, deleting merged branches, pruning remotes, and verifying a clean state.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Eric Hansen",
+    "url": "https://github.com/ericchansen"
+  },
+  "repository": "https://github.com/ericchansen/copilot-marketplace",
+  "license": "MIT",
+  "skills": "skills/"
+}

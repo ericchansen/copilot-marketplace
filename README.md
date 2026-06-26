@@ -1,80 +1,39 @@
-# copilot-config
+# copilot-marketplace
 
-A Copilot CLI plugin with personal skills, MCP servers, and LSP servers for git workflow,
-document generation, API reverse-engineering, PR review, and developer productivity.
+Personal GitHub Copilot CLI marketplace containing 6 independently installable skill plugins.
 
 ## Install
 
-```bash
-# 1. Register the marketplace (one-time)
-copilot plugin marketplace add ericchansen/copilot-config
+Open Copilot CLI, then register this marketplace once:
 
-# 2. Install the plugin
-copilot plugin install copilot-config@copilot-config
+```text
+copilot
+/plugin marketplace add ericchansen/copilot-marketplace
 ```
 
-Verify:
+Install plugins individually:
 
-```bash
-copilot plugin list
+```text
+/plugin install doc-generator@copilot-marketplace
 ```
 
-Update later:
+Replace `doc-generator` with any plugin name below.
 
-```bash
-copilot plugin update copilot-config@copilot-config
+## Plugins
+
+- `azure-doctor` — Diagnose and fix Azure deployments across repos, CI/CD pipelines, subscriptions, and service health.
+- `clean` — Perform post-merge git cleanup by returning to main/master, pulling latest, deleting merged branches, pruning remotes, and verifying a clean state.
+- `doc-generator` — Generate professional PDF and Word (DOCX) documents from markdown source files.
+- `edge-browser` — Launch Microsoft Edge with a specific user profile and remote debugging enabled for CDP control.
+- `git-safety-scan` — Scan staged changes or commits for sensitive data before pushing to remote.
+- `pr-review-address` — Review, address, and resolve GitHub PR feedback across comments, review threads, and requested changes.
+
+## Repository structure
+
+```text
+plugins/<name>/
+  plugin.json
+  skills/<name>/SKILL.md
 ```
 
-## Skills
-
-| Skill | Triggers | Purpose |
-|-------|----------|---------|
-| **git-commit** | `/commit`, "commit changes", "push code" | Conventional commit messages with intelligent staging |
-| **git-safety-scan** | Automatic before push | Scans for secrets, PII, and custom blocklist terms |
-| **clean** | "clean up", "merged, clean up", "back to main" | Post-merge branch cleanup and next-steps |
-| **gh-writer** | `gh pr create`, `gh issue create`, `gh issue comment` | Encoding-safe + content quality for all GitHub writes |
-| **pr-review-address** | "address PR comments", "fix review" | Categorize, fix, reply to, and resolve PR feedback |
-| **code-review** | "review my code", "closeout review", "review this branch/PR" | Structured closeout review with verify-before-fix and rerun-until-clean |
-| **doc-generator** | "generate PDF", "create Word doc" | Markdown → PDF/DOCX via Playwright + python-docx |
-| **api-reverse-engineer** | "reverse engineer", "sniff the API" | Intercept browser network traffic via CDP |
-| **edge-browser** | Profile-specific browsing needs | Launch Edge with debug port for authenticated sessions |
-| **revealjs-presentation** | "create a presentation", "make slides", "build a deck" | Generate Reveal.js HTML slide decks from topic outlines |
-| **release-announce** | "announce release", "post to Teams" | Draft and send release announcements to Teams channels |
-
-## MCP Servers
-
-| Server | Type | Purpose |
-|--------|------|---------|
-| azure-mcp | stdio | Azure resource management via `@azure/mcp` |
-| context7 | remote | Library documentation lookup via Context7 |
-| msft-learn | remote | Microsoft Learn documentation search |
-| WebIQ-MCP | remote | Microsoft WebIQ web, news, finance, image, video, and browse tools |
-| playwright | stdio | Browser automation via Playwright MCP |
-| chrome-devtools | stdio | Chrome DevTools Protocol access |
-
-`WebIQ-MCP` requires a Microsoft WebIQ API key. The committed `.mcp.json` uses the placeholder
-`<your-api-key>`; replace or provide that value only in your local Copilot configuration and do not
-commit a real key.
-
-## LSP Servers
-
-| Server | Languages | Command |
-|--------|-----------|---------|
-| typescript | `.ts`, `.tsx`, `.js`, `.jsx` | `typescript-language-server --stdio` |
-| python | `.py` | `pyright-langserver --stdio` |
-| rust | `.rs` | `rust-analyzer` |
-
-## Extras
-
-The `extras/` directory contains files that the plugin system cannot deploy automatically:
-
-| File | Purpose | Manual install |
-|------|---------|----------------|
-| `copilot-instructions.md` | Global behavioral instructions (git workflow, security, verification) | Copy to `~/.copilot/copilot-instructions.md` |
-| `config.portable.json` | Personal settings (model, theme, reasoning effort) | Merge into `~/.copilot/config.json` |
-
-## Adding Content
-
-- **New skill**: Create `skills/{name}/SKILL.md` with YAML frontmatter
-- **New MCP server**: Add to `mcpServers` in `.mcp.json`
-- **New LSP server**: Add to `lspServers` in `lsp.json`
+Skill helper files live beside their `SKILL.md` files. `copilot-home/` holds the portable user-level config (settings, MCP/LSP servers, instructions) deployed to `~/.copilot/` via `copilot-home/link.ps1` — see `copilot-home/README.md`.
