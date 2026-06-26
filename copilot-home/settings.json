@@ -10,17 +10,17 @@
   // "wt-local") are intentionally NOT committed; link.ps1 preserves them
   // locally when deploying so this source stays clean.
   "extraKnownMarketplaces": {
-    "copilot-personal": {
+    "copilot-marketplace": {
       "source": { "source": "github", "repo": "ericchansen/copilot-marketplace" }
     }
   },
   // ── Declarative auto-install (home profile: personal plugins only) ────
   "enabledPlugins": {
-    "git-safety-scan@copilot-personal": true,
-    "clean@copilot-personal": true,
-    "pr-review-address@copilot-personal": true,
-    "doc-generator@copilot-personal": true,
-    "edge-browser@copilot-personal": true,
-    "azure-doctor@copilot-personal": true
+    "git-safety-scan@copilot-marketplace": true,
+    "clean@copilot-marketplace": true,
+    "pr-review-address@copilot-marketplace": true,
+    "doc-generator@copilot-marketplace": true,
+    "edge-browser@copilot-marketplace": true,
+    "azure-doctor@copilot-marketplace": true
   }
 }
