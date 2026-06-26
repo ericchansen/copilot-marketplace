@@ -20,6 +20,14 @@ Diagnose and repair Azure deployments end-to-end: repo → CI/CD → infra → r
 
 Work like an SRE: gather evidence first, form a hypothesis, fix, then verify. Never guess — always check.
 
+## Conventions
+
+- **Resource naming:** `<type>-<app>-<env>` (e.g., `rg-itemwise-prod`, `ca-itemwise-dev`). Never bare `prod`/`dev`.
+- **Demo subscriptions:** MCAPS Managed Environment subscriptions match `ME-MngEnv*` — check these first for demo/dev deployments. Find them with:
+  ```bash
+  az account list --query "[?starts_with(name,'ME-MngEnv')].name" -o tsv
+  ```
+
 ## Workflow
 
 ### 1. Understand the Deployment Architecture

@@ -1,0 +1,12 @@
+{
+  "name": "pr-review-address",
+  "description": "Review, address, and resolve GitHub PR feedback across comments, review threads, and requested changes.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Eric Hansen",
+    "url": "https://github.com/ericchansen"
+  },
+  "repository": "https://github.com/ericchansen/copilot-marketplace",
+  "license": "MIT",
+  "skills": "skills/"
+}
