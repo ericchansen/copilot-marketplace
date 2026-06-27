@@ -10,6 +10,12 @@
   },
   "plugins": [
     {
+      "name": "api-reverse-engineer",
+      "source": "plugins/api-reverse-engineer",
+      "description": "Capture browser network requests through Chrome DevTools Protocol when a web UI is the only reliable API reference.",
+      "version": "0.1.0"
+    },
+    {
       "name": "azure-doctor",
       "source": "plugins/azure-doctor",
       "description": "Diagnose and fix Azure deployments across repos, CI/CD pipelines, subscriptions, and service health.",
@@ -34,9 +40,27 @@
       "version": "0.1.0"
     },
     {
+      "name": "git-code-review",
+      "source": "plugins/git-code-review",
+      "description": "Run a structured closeout review over local, branch, commit, or PR diffs before shipping.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "git-commit",
+      "source": "plugins/git-commit",
+      "description": "Create conventional commits with diff analysis, safe staging, and repository guideline awareness.",
+      "version": "0.1.0"
+    },
+    {
       "name": "git-safety-scan",
       "source": "plugins/git-safety-scan",
       "description": "Scan staged changes or commits for sensitive data before pushing to remote.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "github-writer",
+      "source": "plugins/github-writer",
+      "description": "Write PRs, issues, and comments for GitHub with encoding-safe body files and sanitized, structured content.",
       "version": "0.1.0"
     },
     {

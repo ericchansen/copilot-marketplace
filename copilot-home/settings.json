@@ -16,7 +16,11 @@
   },
   // ── Declarative auto-install (home profile: personal plugins only) ────
   "enabledPlugins": {
+    "api-reverse-engineer@copilot-marketplace": true,
     "git-safety-scan@copilot-marketplace": true,
+    "git-code-review@copilot-marketplace": true,
+    "git-commit@copilot-marketplace": true,
+    "github-writer@copilot-marketplace": true,
     "clean@copilot-marketplace": true,
     "pr-review-address@copilot-marketplace": true,
     "doc-generator@copilot-marketplace": true,
