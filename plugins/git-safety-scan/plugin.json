@@ -1,7 +1,7 @@
 {
   "name": "git-safety-scan",
   "description": "Scan staged changes or commits for sensitive data before pushing to remote.",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "author": {
     "name": "Eric Hansen",
     "url": "https://github.com/ericchansen"
