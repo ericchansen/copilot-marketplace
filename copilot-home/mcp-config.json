@@ -22,6 +22,18 @@
       "command": "npx",
       "args": ["-y", "chrome-devtools-mcp@latest"],
       "tools": ["*"]
+    },
+    "zotero": {
+      "type": "local",
+      "command": "uvx",
+      "args": ["--from", "zotero-mcp-server", "zotero-mcp", "serve"],
+      "env": {
+        "ZOTERO_LOCAL": "false",
+        "ZOTERO_LIBRARY_TYPE": "user",
+        "ZOTERO_LIBRARY_ID": "1276304",
+        "ZOTERO_API_KEY": "${ZOTERO_API_KEY}"
+      },
+      "tools": ["*"]
     }
   }
 }
