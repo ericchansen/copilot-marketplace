@@ -1,0 +1,6 @@
+{
+  "name": "edge-browser",
+  "version": "0.1.0",
+  "description": "Launch Microsoft Edge with a specific user profile and remote debugging enabled for CDP control.",
+  "skills": "./skills/"
+}

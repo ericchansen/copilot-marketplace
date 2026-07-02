@@ -1,0 +1,6 @@
+{
+  "name": "clean",
+  "version": "0.1.0",
+  "description": "Perform post-merge git cleanup by returning to main/master, pulling latest, deleting merged branches, pruning remotes, and verifying a clean state.",
+  "skills": "./skills/"
+}

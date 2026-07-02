@@ -1,0 +1,85 @@
+{
+  "name": "copilot-marketplace",
+  "plugins": [
+    {
+      "name": "api-reverse-engineer",
+      "source": { "source": "local", "path": "./plugins/api-reverse-engineer" },
+      "interface": { "displayName": "API Reverse Engineer" },
+      "description": "Capture browser network requests through Chrome DevTools Protocol when a web UI is the only reliable API reference.",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Development"
+    },
+    {
+      "name": "azure-doctor",
+      "source": { "source": "local", "path": "./plugins/azure-doctor" },
+      "interface": { "displayName": "Azure Doctor" },
+      "description": "Diagnose and fix Azure deployments across repos, CI/CD pipelines, subscriptions, and service health.",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "DevOps"
+    },
+    {
+      "name": "clean",
+      "source": { "source": "local", "path": "./plugins/clean" },
+      "interface": { "displayName": "Clean" },
+      "description": "Perform post-merge git cleanup by returning to main/master, pulling latest, deleting merged branches, pruning remotes, and verifying a clean state.",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Development"
+    },
+    {
+      "name": "doc-generator",
+      "source": { "source": "local", "path": "./plugins/doc-generator" },
+      "interface": { "displayName": "Doc Generator" },
+      "description": "Generate professional PDF and Word (DOCX) documents from markdown source files.",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    },
+    {
+      "name": "edge-browser",
+      "source": { "source": "local", "path": "./plugins/edge-browser" },
+      "interface": { "displayName": "Edge Browser" },
+      "description": "Launch Microsoft Edge with a specific user profile and remote debugging enabled for CDP control.",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Development"
+    },
+    {
+      "name": "git-code-review",
+      "source": { "source": "local", "path": "./plugins/git-code-review" },
+      "interface": { "displayName": "Git Code Review" },
+      "description": "Run a structured closeout review over local, branch, commit, or PR diffs before shipping.",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Development"
+    },
+    {
+      "name": "git-commit",
+      "source": { "source": "local", "path": "./plugins/git-commit" },
+      "interface": { "displayName": "Git Commit" },
+      "description": "Create conventional commits with diff analysis, safe staging, and repository guideline awareness.",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Development"
+    },
+    {
+      "name": "git-safety-scan",
+      "source": { "source": "local", "path": "./plugins/git-safety-scan" },
+      "interface": { "displayName": "Git Safety Scan" },
+      "description": "Scan staged changes or commits for sensitive data before pushing to remote.",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Security"
+    },
+    {
+      "name": "github-writer",
+      "source": { "source": "local", "path": "./plugins/github-writer" },
+      "interface": { "displayName": "GitHub Writer" },
+      "description": "Write PRs, issues, and comments for GitHub with encoding-safe body files and sanitized, structured content.",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    },
+    {
+      "name": "pr-review-address",
+      "source": { "source": "local", "path": "./plugins/pr-review-address" },
+      "interface": { "displayName": "PR Review Address" },
+      "description": "Review, address, and resolve GitHub PR feedback across comments, review threads, and requested changes.",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Development"
+    }
+  ]
+}

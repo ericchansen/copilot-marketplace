@@ -1,0 +1,6 @@
+{
+  "name": "doc-generator",
+  "version": "0.1.0",
+  "description": "Generate professional PDF and Word (DOCX) documents from markdown source files.",
+  "skills": "./skills/"
+}
