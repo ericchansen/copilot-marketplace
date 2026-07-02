@@ -1,0 +1,6 @@
+{
+  "name": "git-code-review",
+  "version": "0.1.0",
+  "description": "Run a structured closeout review over local, branch, commit, or PR diffs before shipping.",
+  "skills": "./skills/"
+}

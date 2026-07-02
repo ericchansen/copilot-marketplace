@@ -1,0 +1,6 @@
+{
+  "name": "git-safety-scan",
+  "version": "0.1.0",
+  "description": "Scan staged changes or commits for sensitive data before pushing to remote.",
+  "skills": "./skills/"
+}

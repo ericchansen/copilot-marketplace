@@ -92,3 +92,67 @@ jobs:
           done
           [ $errors -gt 0 ] && { echo "::error::$errors frontmatter error(s) found"; exit 1; }
           echo "✓ All SKILL.md files have valid frontmatter"
+
+      - name: Validate Claude Code marketplace mirror
+        run: |
+          CANON=.github/plugin/marketplace.json
+          MIRROR=.claude-plugin/marketplace.json
+          if [ ! -f "$MIRROR" ]; then
+            echo "::error::$MIRROR not found (Claude Code marketplace)"
+            exit 1
+          fi
+          jq empty "$MIRROR" || { echo "::error::$MIRROR is not valid JSON"; exit 1; }
+          if ! diff -q "$CANON" "$MIRROR" >/dev/null; then
+            echo "::error::$MIRROR must be byte-identical to $CANON. Run: cp $CANON $MIRROR"
+            exit 1
+          fi
+          echo "✓ Claude Code marketplace mirror is in sync"
+
+      - name: Validate Codex marketplace catalog
+        run: |
+          CANON=.github/plugin/marketplace.json
+          CODEX=.agents/plugins/marketplace.json
+          if [ ! -f "$CODEX" ]; then
+            echo "::error::$CODEX not found (Codex marketplace)"
+            exit 1
+          fi
+          jq empty "$CODEX" || { echo "::error::$CODEX is not valid JSON"; exit 1; }
+          if ! diff <(jq -r '.plugins[].name' "$CANON" | sort) <(jq -r '.plugins[].name' "$CODEX" | sort) >/dev/null; then
+            echo "::error::$CODEX plugin set differs from $CANON"
+            exit 1
+          fi
+          errors=0
+          while read -r entry; do
+            name=$(echo "$entry" | jq -r '.name')
+            path=$(echo "$entry" | jq -r '.source.path')
+            dir=${path#./}
+            if [ ! -d "$dir" ]; then
+              echo "::error::codex plugin '$name' source path '$path' does not exist"
+              errors=$((errors + 1))
+              continue
+            fi
+            if [ ! -f "$dir/.codex-plugin/plugin.json" ]; then
+              echo "::error::codex plugin '$name' missing $dir/.codex-plugin/plugin.json"
+              errors=$((errors + 1))
+            fi
+          done < <(jq -c '.plugins[]' "$CODEX")
+          [ $errors -gt 0 ] && exit 1
+          echo "✓ Codex marketplace catalog valid and resolves"
+
+      - name: Validate Codex plugin manifests match plugin.json
+        run: |
+          errors=0
+          for manifest in plugins/*/.codex-plugin/plugin.json; do
+            [ -f "$manifest" ] || continue
+            jq empty "$manifest" || { echo "::error::$manifest is not valid JSON"; errors=$((errors + 1)); continue; }
+            dir=$(dirname "$(dirname "$manifest")")
+            root="$dir/plugin.json"
+            cn=$(jq -r '.name' "$manifest"); cv=$(jq -r '.version' "$manifest"); cs=$(jq -r '.skills' "$manifest")
+            rn=$(jq -r '.name' "$root"); rv=$(jq -r '.version' "$root")
+            [ "$cn" = "$rn" ] || { echo "::error::$manifest name '$cn' != $root name '$rn'"; errors=$((errors + 1)); }
+            [ "$cv" = "$rv" ] || { echo "::error::$manifest version '$cv' != $root version '$rv'"; errors=$((errors + 1)); }
+            skdir="$dir/${cs#./}"
+            [ -d "$skdir" ] || { echo "::error::$manifest skills path '$cs' missing"; errors=$((errors + 1)); }
+          done
+          [ $errors -gt 0 ] && exit 1
+          echo "✓ Codex plugin manifests valid and in sync with plugin.json"
