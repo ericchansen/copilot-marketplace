@@ -4,9 +4,10 @@
 
 - Never work on `main`/`master` — no commits, edits, or pushes, ever. Check `git branch --show-current` first; if on a default branch, create a worktree + feature branch (`<type>/<short-desc>`) and open a PR. Work inside the worktree; follow the repo's `AGENTS.md`/`CONTRIBUTING.md`.
 - Run linters and tests after each logical change, not just at push time.
-- Commits should tell a clear, readable history — someone reading the log later should understand what changed and why. If you make a series of fixes to work that isn't yet in `main`, rebase them into the commits they correct rather than leaving "fix" commits behind. Only add a separate fix commit when the code being fixed is already in `main`.
+- Clean commits mean the merged history reads as if the work were done right the first time: each commit is one coherent, self-contained, conventionally-formatted change, and someone reading the log later understands what changed and why. Never leave a commit that fixes, tweaks, or reverts something another commit in the same *unmerged* PR introduced — rebase that fix back into the commit at fault (squash WIP / "address review" / "oops" noise the same way). A standalone fix commit is only correct when the code it corrects is already on `main`.
 - Before pushing: run the linter and full test suite; run E2E against Edge (not Chrome) if present; scan the diff for secrets and PII; show `git diff origin/main..HEAD --stat` and get explicit user confirmation. Never push to a default branch, and never merge PRs — the user merges.
-- Prefer linear history (rebase, `--ff-only`, squash WIP into one logical commit). Use `--force-with-lease` when rewriting already-pushed history.
+- Prefer linear history (rebase, `--ff-only`, squash WIP into one logical commit; `--force-with-lease` when rewriting already-pushed history).
+- Do this curation automatically before every push, PR open, or review update — never wait to be asked; fold the check into the pre-push confirmation step rather than raising it as its own question.
 - Multi-account auth: if a git/gh operation fails unexpectedly, run `gh auth status`, switch with `gh auth switch --user <account>`, and on SAML/SSO failures retry over HTTPS with `git -c credential.helper="!gh auth git-credential" <command>`.
 
 ## Environment
