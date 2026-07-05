@@ -68,6 +68,12 @@
       "source": "plugins/pr-review-address",
       "description": "Review, address, and resolve GitHub PR feedback across comments, review threads, and requested changes.",
       "version": "0.1.0"
+    },
+    {
+      "name": "foundry-image-gen",
+      "source": "plugins/foundry-image-gen",
+      "description": "Generate images using GPT-Image-2 deployed in Azure AI Foundry.",
+      "version": "0.1.0"
     }
   ]
 }
