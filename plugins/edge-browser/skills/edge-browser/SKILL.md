@@ -1,17 +1,18 @@
 ---
 name: edge-browser
 description: |
-  Launch Microsoft Edge with a specific user profile and remote debugging enabled, then connect
-  to Edge via Chrome DevTools Protocol (CDP) for interactive control. Use when the user needs a
-  particular Edge profile's cookies, SSO session, or managed-device auth (Conditional Access).
-  Also supports token extraction from authenticated pages for server-side API calls.
+  Launch Microsoft Edge with remote debugging on a dedicated debug profile, then control it via
+  Chrome DevTools Protocol (CDP). Use when you need the signed-in work account's SSO session,
+  managed-device auth (Conditional Access), or to extract a bearer token from an authenticated
+  page for server-side API calls.
 license: MIT
 allowed-tools: PowerShell, Chrome DevTools
 ---
 
-# Edge Browser — Profile-Aware Browser Automation
+# Edge Browser — Debug-Profile Browser Automation
 
-Launch and control Microsoft Edge with a specific user profile via Chrome DevTools Protocol (CDP).
+Launch and control Microsoft Edge over Chrome DevTools Protocol (CDP) using a dedicated debug
+profile that signs in as your real work account via the device PRT.
 
 ## Critical Rules
 
@@ -21,29 +22,12 @@ Launch and control Microsoft Edge with a specific user profile via Chrome DevToo
    Edge on port 9222. It maintains a separate browser connection. You must verify which browser
    you're talking to (see Step 1). When Chrome DevTools MCP is on the wrong browser, use raw
    CDP calls via PowerShell + Node.js instead.
-3. **One browser, one port** — if port 9222 is already in use, check who owns it before launching
-   anything. Never launch Edge if another process already has the port.
+3. **Launch your own debug profile — never touch the user's Edge.** On Edge/Chrome 136+ the debug
+   port only binds when Edge runs on a **dedicated, non-default `--user-data-dir`**. Launch that
+   separate instance on its own port; it runs alongside the user's normal Edge, so there is nothing
+   to close (see Step 2).
 4. **`$pid` is reserved in PowerShell** — when iterating over process IDs, use `$processId` or `$p`,
    never `$pid` (it's a read-only automatic variable that returns the current process ID).
-
-## Profile Discovery
-
-Edge profiles live in `$env:LOCALAPPDATA\Microsoft\Edge\User Data\`. Each profile directory
-(`Default`, `Profile 1`, etc.) has a `Preferences` JSON file.
-
-```powershell
-Get-ChildItem "$env:LOCALAPPDATA\Microsoft\Edge\User Data" -Directory | ForEach-Object {
-    $prefsFile = Join-Path $_.FullName "Preferences"
-    if (Test-Path $prefsFile) {
-        $prefs = Get-Content $prefsFile -Raw | ConvertFrom-Json -ErrorAction SilentlyContinue
-        $email = try { $prefs.account_info[0].email } catch { $null }
-        $name = try { $prefs.profile.name } catch { $null }
-        if ($name) { [PSCustomObject]@{ Dir = $_.Name; Name = $name; Email = $email } }
-    }
-} | Format-Table -AutoSize
-```
-
-The `Dir` column is what you pass to `--profile-directory`. Match the user's target account by email.
 
 ## Workflow
 
@@ -55,7 +39,7 @@ $portCheck = Get-NetTCPConnection -LocalPort 9222 -ErrorAction SilentlyContinue
 if ($portCheck) {
     # Something is listening — is it Edge?
     try {
-        $version = Invoke-RestMethod -Uri "http://localhost:9222/json/version" -ErrorAction Stop
+        $version = Invoke-RestMethod -Uri "http://127.0.0.1:9222/json/version" -ErrorAction Stop
         if ($version.Browser -match "Edg/") {
             Write-Host "Edge CDP already active: $($version.Browser) — skip to Step 3"
         } else {
@@ -75,53 +59,46 @@ if ($portCheck) {
 If Edge CDP is already active (`Edg/` in Browser string), **skip to Step 3**.
 If port 9222 is in use by something else, stop that process first or choose another port.
 
-### Step 2: Launch Edge with debug port (only if CDP is not active)
+### Step 2: Launch Edge on a dedicated debug profile
 
-Edge ignores `--remote-debugging-port` when it's already running — you can't add the flag
-to a running instance or launch a second instance on a different port. So there are two cases:
+Launch a **separate** Edge instance with its own **dedicated, non-default `--user-data-dir`** and a
+debug port. This is the only launch that reliably binds the CDP port on Edge/Chrome **136+** — the
+port is silently ignored whenever Edge resolves to its default `User Data` directory (even if you
+point `--user-data-dir` *at* that default store). The dedicated dir runs as its own Chromium
+instance, so it never touches — and never needs you to close — the user's normal Edge.
 
-**Case A — Edge is NOT running:** Just launch it. No kill needed.
-
-**Case B — Edge IS running without debug port:** Must restart. Warn the user that their tabs
-will be restored via `--restore-last-session`, then close and relaunch.
+On a managed / Entra-joined device the dedicated profile still signs in as the user's **real work
+account**: authentication flows through the **device Primary Refresh Token (PRT) / WAM broker**,
+which is bound to the device + Windows login, not to the Edge profile folder. So a brand-new
+profile signs into `@microsoft.com` silently (no password) and carries the managed-device /
+Conditional Access posture — which is what makes server-side token extraction work.
 
 ```powershell
-# Only kill if Edge is running (Case B)
-$edgePids = @(Get-Process msedge -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id)
+# Dedicated debug profile: its own user-data-dir + port. Nothing to kill.
+$dir  = Join-Path $env:LOCALAPPDATA 'Microsoft\Edge\CdpDebugProfile'
+$port = 9222
+Start-Process msedge -ArgumentList @(
+    "--remote-debugging-port=$port",
+    "--user-data-dir=`"$dir`"",      # dedicated + quoted (LOCALAPPDATA may contain spaces) -> port binds on Edge 136+
+    '--no-first-run', '--no-default-browser-check',
+    '<START_URL>'                    # e.g. the authenticated app you need
+)
 
-if ($edgePids.Count -gt 0) {
-    Write-Host "Edge is running without debug port. Restarting ($($edgePids.Count) processes)..."
-    foreach ($processId in $edgePids) {
-        Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
-    }
-    # Wait for clean exit (up to 10 seconds)
-    for ($i = 0; $i -lt 20; $i++) {
-        if (@(Get-Process msedge -ErrorAction SilentlyContinue).Count -eq 0) { break }
-        Start-Sleep -Milliseconds 500
-    }
-}
-
-# Launch with debug port + profile + restore tabs
-# IMPORTANT: Use cmd /c with explicit quotes around the profile directory value.
-# PowerShell's Start-Process -ArgumentList splits "Profile 1" at the space,
-# causing Edge to receive --profile-directory=Profile (wrong profile) and "1"
-# as a separate argument. This silently creates a new empty profile instead
-# of using the intended one.
-$profileDir = "Default"   # <-- from profile discovery
-cmd /c "start msedge --remote-debugging-port=9222 --profile-directory=`"$profileDir`" --restore-last-session"
-
-# Wait for CDP to become available
+# Prove the port bound — probe the IPv4 LITERAL ('localhost' can resolve to ::1 and hang):
 for ($i = 1; $i -le 15; $i++) {
     Start-Sleep -Seconds 1
     try {
-        $v = Invoke-RestMethod -Uri "http://localhost:9222/json/version" -ErrorAction Stop
-        Write-Host "CDP ready in ${i}s — $($v.Browser)"
+        $v = Invoke-RestMethod "http://127.0.0.1:$port/json/version" -TimeoutSec 4 -ErrorAction Stop
+        Write-Host "CDP ready in ${i}s — $($v.Browser)"   # -> Edg/…
         break
-    } catch {
-        if ($i -eq 15) { Write-Host "FAILED: Edge CDP not available after 15s" }
-    }
+    } catch { if ($i -eq 15) { Write-Host "FAILED: CDP not available after 15s" } }
 }
 ```
+
+The first launch of a brand-new `--user-data-dir` starts signed-out; navigating to a work URL
+triggers the silent PRT sign-in. Reuse the same dir on later runs to keep the warm session. Some
+app tokens are only minted once the authenticated view (a specific record/page) actually loads —
+open it, or drive the action with the Step 3 CDP tools, before extracting.
 
 ### Step 3: Interact with Edge
 
@@ -134,12 +111,13 @@ Use **Chrome DevTools MCP tools** (not Playwright):
 - `chrome-devtools-evaluate_script` — run JavaScript in the page
 - `chrome-devtools-list_network_requests` — inspect API traffic
 
-### Step 4: Verify the correct profile is active
+### Step 4: Verify the work account is signed in
 
-After connecting, verify the expected account is signed in:
+After connecting, confirm the expected account is signed in (the dedicated profile signs in
+silently via the device PRT):
 
 ```powershell
-$pages = Invoke-RestMethod -Uri "http://localhost:9222/json"
+$pages = Invoke-RestMethod -Uri "http://127.0.0.1:9222/json"
 $pages | Where-Object { $_.type -eq "page" } | ForEach-Object {
     Write-Host "$($_.title) — $($_.url.Substring(0, [Math]::Min($_.url.Length, 80)))"
 }
@@ -185,19 +163,20 @@ Refreshing the authenticated page triggers MSAL silent token renewal.
 
 - **Never use Playwright MCP with Edge** — it launches a separate Chromium, causing port 9222
   conflicts and a confusing two-browser situation where tools operate on different browsers
-- **`--remote-debugging-port` is silently ignored** if Edge is already running. You MUST close
-  all Edge processes first, then relaunch with the flag
+- **The debug port only binds on a dedicated, non-default `--user-data-dir`.** On Edge/Chrome 136+
+  the port is silently ignored on the default `User Data` store, so always launch with your own
+  `--user-data-dir` (Step 2) — then you never need to close the user's Edge
 - **`$pid` is reserved in PowerShell** — use `$processId`, `$p`, or any other name when iterating
   over process IDs in `foreach` loops
 - **SSO redirects may land in a different tab** — use `chrome-devtools-list_pages` after navigation
 - **Azure Portal needs tenant parameter** for managed tenants: `?tenant=<TENANT_ID>`
 - **Port 9222 conflicts** — check with `Get-NetTCPConnection -LocalPort 9222` before launching.
   If Playwright MCP already grabbed the port, stop it first
-- **Profile directories with spaces break `Start-Process`** — PowerShell's `Start-Process
-  -ArgumentList` splits `"--profile-directory=Profile 1"` at the space, so Edge receives
-  `--profile-directory=Profile` (wrong directory) and `1` as a separate arg. This silently
-  creates a new empty profile instead of using the intended one. **Always use `cmd /c`** with
-  explicit quotes: `cmd /c "start msedge --profile-directory=`"Profile 1`""` 
+- **Paths with spaces:** `Start-Process -ArgumentList` joins array elements with spaces and does
+  **not** quote them, so a value containing a space (e.g. `$env:LOCALAPPDATA` under
+  `C:\Users\First Last\`) splits into extra args and Edge gets the wrong `--user-data-dir`. Quote the
+  value *inside* the flag (`--user-data-dir="…"`, escaped as in Step 2) — putting it in its own array
+  element is not enough. Avoid building one big `cmd /c "start msedge ..."` string
 - **Prefer snapshots over screenshots** for interaction — snapshots give element refs (uid) that
   `chrome-devtools-click` and `chrome-devtools-fill` accept
 - **Chrome DevTools MCP has its own internal browser** — it does NOT connect to Edge on port 9222
@@ -206,7 +185,7 @@ Refreshing the authenticated page triggers MSAL silent token renewal.
 
   ```powershell
   # This hits the REAL port 9222 (Edge):
-  Invoke-RestMethod "http://localhost:9222/json/version" | Select-Object Browser
+  Invoke-RestMethod "http://127.0.0.1:9222/json/version" | Select-Object Browser
   # Should show: Edg/xxx.x.xxxx.xx
 
   # If chrome-devtools-list_pages shows different content than the raw CDP endpoint,
@@ -215,5 +194,5 @@ Refreshing the authenticated page triggers MSAL silent token renewal.
 
   **Workaround:** When Chrome DevTools MCP is on the wrong browser, use raw CDP
   endpoints via PowerShell + Node.js with the `ws` package for Edge interactions.
-  Connect a WebSocket to the page's `webSocketDebuggerUrl` (from `http://localhost:9222/json`)
+  Connect a WebSocket to the page's `webSocketDebuggerUrl` (from `http://127.0.0.1:9222/json`)
   and send `Runtime.evaluate` commands to run JavaScript in the page context.
