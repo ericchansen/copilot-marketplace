@@ -11,15 +11,22 @@ This plugin provides the `generate_image` tool backed by GPT-Image-2 deployed in
 
 ## Prerequisites
 
-- Azure CLI authenticated (`az login`) with access to the target AI Services account
+- Azure CLI installed and authenticated (`az login`)
+- **Cognitive Services User** role on the target AI Services account (RBAC — needed for token-based auth)
 - A GPT-Image-2 model deployed in Azure AI Foundry (GlobalStandard SKU)
+
+> The extension pins its Entra token to the resource's subscription (`FOUNDRY_IMAGE_SUBSCRIPTION`), so it works even when your default `az` context is a different subscription/tenant. Without this, a wrong-tenant token returns `500: Unable to get resource information`.
 
 ## Configuration
 
-The extension connects to a hardcoded endpoint. To use your own deployment, edit the constants at the top of the extension entry point (`extension.mjs` inside the installed plugin's `.github/extensions/foundry-image-gen/` directory):
+Defaults target the maintainer's Foundry resource. To point at your own deployment, set any of these env vars (each falls back to the built-in default) — no code edits or per-machine file changes needed:
 
-- `ENDPOINT` — your Azure AI Services endpoint URL
-- `DEPLOYMENT` — your model deployment name (default: `gpt-image-2`)
+| Env var | Default | Description |
+|---------|---------|-------------|
+| `FOUNDRY_IMAGE_ENDPOINT` | `https://foundry-eg6typ.cognitiveservices.azure.com` | Azure AI Services endpoint URL |
+| `FOUNDRY_IMAGE_DEPLOYMENT` | `gpt-image-2` | Model deployment name |
+| `FOUNDRY_IMAGE_API_VERSION` | `2025-04-01-preview` | Images API version |
+| `FOUNDRY_IMAGE_SUBSCRIPTION` | maintainer's sub ID | Subscription **GUID** that owns the resource (pins the token tenant) |
 
 ## Usage
 

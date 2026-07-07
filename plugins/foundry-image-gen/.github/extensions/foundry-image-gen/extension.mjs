@@ -6,15 +6,28 @@ import { execSync } from "node:child_process";
 import { writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, basename } from "node:path";
 
-// ── Config (edit these if your deployment changes) ──────────────────────────
-const ENDPOINT = "https://foundry-eg6typ.cognitiveservices.azure.com";
-const DEPLOYMENT = "gpt-image-2";
-const API_VERSION = "2025-04-01-preview";
+// ── Config ──────────────────────────────────────────────────────────────────
+// Override per machine via env vars; defaults target Eric's Foundry resource.
+// SUBSCRIPTION pins the token to the resource's tenant regardless of the user's
+// default az context (wrong tenant → "500: Unable to get resource information").
+// Trim env values so a stray trailing newline/space (common on copy-paste) doesn't
+// break the URL or the subscription GUID guard.
+const envOr = (name, fallback) => process.env[name]?.trim() || fallback;
+const ENDPOINT = envOr("FOUNDRY_IMAGE_ENDPOINT", "https://foundry-eg6typ.cognitiveservices.azure.com");
+const DEPLOYMENT = envOr("FOUNDRY_IMAGE_DEPLOYMENT", "gpt-image-2");
+const API_VERSION = envOr("FOUNDRY_IMAGE_API_VERSION", "2025-04-01-preview");
+const SUBSCRIPTION = envOr("FOUNDRY_IMAGE_SUBSCRIPTION", "9450bd3b-96c5-48b2-bfdf-3374304efbd7");
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function getEntraToken() {
+    // ponytail: SUBSCRIPTION is interpolated into a shell command, so restrict it
+    // to a GUID (the only shape the token-pin needs) to block shell injection.
+    if (SUBSCRIPTION && !/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(SUBSCRIPTION)) {
+        throw new Error(`Invalid FOUNDRY_IMAGE_SUBSCRIPTION (expected a GUID): ${SUBSCRIPTION}`);
+    }
+    const sub = SUBSCRIPTION ? `--subscription ${SUBSCRIPTION} ` : "";
     return execSync(
-        "az account get-access-token --resource https://cognitiveservices.azure.com --query accessToken -o tsv",
+        `az account get-access-token ${sub}--resource https://cognitiveservices.azure.com --query accessToken -o tsv`,
         { encoding: "utf-8", timeout: 30_000 }
     ).trim();
 }
