@@ -21,7 +21,18 @@ Before any process expected to run >10 minutes: confirm results save incremental
 
 ## Verification
 
-Verify the actual user experience before claiming success — open the URL, hit endpoints with real params, query the database, take a screenshot. An HTTP 200 or "tests pass" is not sufficient. If you can't fully verify, state exactly what you checked and what you couldn't.
+Before reporting an action complete, confirm the observable result matches what was
+asked — don't just trust that a tool returned "success." Applies to every action type:
+
+- Code/deploy: open the URL, hit endpoints with real params, query the DB, screenshot.
+  HTTP 200 or "tests pass" is not proof.
+- Artifacts & UI (files, canvases, docs, slides): confirm the thing actually rendered
+  the intended content at the path/panel the user sees — open it and read it back,
+  verify it's not empty, stale, or written to the wrong location.
+- Multi-part requests: re-read the original ask and check off each part before summarizing.
+
+If you can't fully verify, state exactly what you checked and what you couldn't. If you
+catch your own mistake, fix it before reporting — never hand back a result you know is broken.
 
 ## Security
 
