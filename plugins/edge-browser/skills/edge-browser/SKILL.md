@@ -12,9 +12,21 @@ allowed-tools: PowerShell, Chrome DevTools
 # Edge Browser — Debug-Profile Browser Automation
 
 Launch and control Microsoft Edge over Chrome DevTools Protocol (CDP) using a dedicated debug
-profile that signs in as your real work account via the device PRT.
+profile. On Edge/Chrome 136+ that profile must use a non-default `--user-data-dir`, so it starts
+signed-out; some work apps then sign in silently via the device PRT, but apps behind Conditional
+Access may re-challenge (see Critical Rules).
 
 ## Critical Rules
+
+> ⚠️ **Edge/Chrome 136+ silently ignore `--remote-debugging-port` on the default/managed profile**
+> — an intentional anti–cookie-theft mitigation shipped May 2025. The flag appears on the command
+> line and Edge launches normally, but the CDP socket never opens and no `DevToolsActivePort` file
+> is written. `--profile-directory=Default` does **not** satisfy the requirement (it still points
+> at the default `User Data` dir). The only way to re-enable CDP is a **distinct, non-default
+> `--user-data-dir`** — a **fresh profile with no SSO / no authenticated session**. Restarting your
+> real signed-in profile with the debug port is now a **blocked anti-pattern**; for corporate apps
+> behind Entra Conditional Access use [Authenticated / SSO capture](#authenticated--sso-capture-edge-136).
+> Refs: <https://developer.chrome.com/blog/remote-debugging-port>, <https://crbug.com/1414669>
 
 1. **Use Chrome DevTools MCP only** — never Playwright MCP. Playwright launches its own Chromium
    instance, creating a second browser that fights with Edge for port 9222.
@@ -23,9 +35,10 @@ profile that signs in as your real work account via the device PRT.
    you're talking to (see Step 1). When Chrome DevTools MCP is on the wrong browser, use raw
    CDP calls via PowerShell + Node.js instead.
 3. **Launch your own debug profile — never touch the user's Edge.** On Edge/Chrome 136+ the debug
-   port only binds when Edge runs on a **dedicated, non-default `--user-data-dir`**. Launch that
-   separate instance on its own port; it runs alongside the user's normal Edge, so there is nothing
-   to close (see Step 2).
+   port only binds on a **dedicated, non-default `--user-data-dir`**, which is a **fresh profile
+   that does not carry your signed-in session**. Launch it on its own port alongside the user's
+   normal Edge (nothing to close). For apps behind SSO / Conditional Access this profile is not a
+   substitute for the real session — use [Authenticated / SSO capture](#authenticated--sso-capture-edge-136) (see Step 2).
 4. **`$pid` is reserved in PowerShell** — when iterating over process IDs, use `$processId` or `$p`,
    never `$pid` (it's a read-only automatic variable that returns the current process ID).
 
@@ -61,17 +74,18 @@ If port 9222 is in use by something else, stop that process first or choose anot
 
 ### Step 2: Launch Edge on a dedicated debug profile
 
-Launch a **separate** Edge instance with its own **dedicated, non-default `--user-data-dir`** and a
-debug port. This is the only launch that reliably binds the CDP port on Edge/Chrome **136+** — the
-port is silently ignored whenever Edge resolves to its default `User Data` directory (even if you
-point `--user-data-dir` *at* that default store). The dedicated dir runs as its own Chromium
-instance, so it never touches — and never needs you to close — the user's normal Edge.
+> ⚠️ **Edge/Chrome 136+ ignore `--remote-debugging-port` on the default / managed profile.** A
+> distinct, **non-default `--user-data-dir` is mandatory** to bind the CDP port, and that dir is a
+> **fresh profile: it does NOT carry your existing signed-in session.** `--profile-directory=Default`
+> does not help, and restarting the real profile with the debug port is a blocked anti-pattern.
+> Refs: <https://developer.chrome.com/blog/remote-debugging-port>, <https://crbug.com/1414669>
 
-On a managed / Entra-joined device the dedicated profile still signs in as the user's **real work
-account**: authentication flows through the **device Primary Refresh Token (PRT) / WAM broker**,
-which is bound to the device + Windows login, not to the Edge profile folder. So a brand-new
-profile signs into `@microsoft.com` silently (no password) and carries the managed-device /
-Conditional Access posture — which is what makes server-side token extraction work.
+Use this dedicated-profile launch only when a **fresh sign-in is acceptable**. The dedicated dir
+runs as its own Chromium instance, so it never touches — and never needs you to close — the user's
+normal Edge. The fresh profile starts signed-out; some work apps then sign in silently via the
+device Primary Refresh Token (PRT) / WAM broker, but **apps behind Entra Conditional Access /
+device-compliance often re-challenge or block a fresh profile** — for those, do not use CDP here,
+use [Authenticated / SSO capture](#authenticated--sso-capture-edge-136).
 
 ```powershell
 # Dedicated debug profile: its own user-data-dir + port. Nothing to kill.
@@ -85,20 +99,31 @@ Start-Process msedge -ArgumentList @(
 )
 
 # Prove the port bound — probe the IPv4 LITERAL ('localhost' can resolve to ::1 and hang):
+$portFile = Join-Path $dir 'DevToolsActivePort'
 for ($i = 1; $i -le 15; $i++) {
     Start-Sleep -Seconds 1
     try {
         $v = Invoke-RestMethod "http://127.0.0.1:$port/json/version" -TimeoutSec 4 -ErrorAction Stop
-        Write-Host "CDP ready in ${i}s — $($v.Browser)"   # -> Edg/…
+        Write-Host "CDP ready in ${i}s — $($v.Browser)"
         break
-    } catch { if ($i -eq 15) { Write-Host "FAILED: CDP not available after 15s" } }
+    } catch {
+        if ($i -ge 3 -and -not (Test-Path $portFile)) {
+            Write-Host "No DevToolsActivePort after ${i}s — likely the Edge 136 default-dir mitigation. Confirm a non-default --user-data-dir was used; if so, fall back to Authenticated / SSO capture."
+            break
+        }
+        if ($i -eq 15) { Write-Host "FAILED: CDP not available after 15s" }
+    }
 }
 ```
 
-The first launch of a brand-new `--user-data-dir` starts signed-out; navigating to a work URL
-triggers the silent PRT sign-in. Reuse the same dir on later runs to keep the warm session. Some
-app tokens are only minted once the authenticated view (a specific record/page) actually loads —
-open it, or drive the action with the Step 3 CDP tools, before extracting.
+Reuse the same dir on later runs to keep any warm session. Some app tokens are only minted once the
+authenticated view (a specific record/page) actually loads — open it, or drive the action with the
+Step 3 CDP tools, before extracting.
+
+**Edge/Chrome < 136 only (legacy):** before the 136 mitigation you could restart the user's real,
+signed-in profile with the debug port and attach CDP directly
+(`msedge --remote-debugging-port=9222 --profile-directory=Default --restore-last-session`). That
+preserved full SSO, but is **silently ignored on 136+** — do not use it on current Edge.
 
 ### Step 3: Interact with Edge
 
@@ -123,11 +148,34 @@ $pages | Where-Object { $_.type -eq "page" } | ForEach-Object {
 }
 ```
 
+## Authenticated / SSO capture (Edge 136+)
+
+When you need the **real signed-in session** (corporate apps behind Entra Conditional Access /
+managed-device auth), scripted CDP on the default profile is impossible (see Critical Rules). Use
+these, in order:
+
+1. **F12 DevTools capture (recommended).** In the already-signed-in Edge press **F12 → Network**,
+   enable **Preserve log**, perform the action, then right-click the request → **Copy → Copy as
+   cURL**, or **Save all as HAR with content**. F12 is not policy-blocked, runs inside the real SSO
+   session, and yields the exact payload + headers. Treat the cURL/HAR as secrets — temp files
+   only, never commit (they contain live tokens).
+2. **Computer-use / accessibility engine.** Co-drive the real authenticated Edge in the background
+   (no CDP) to navigate and click through the flow. It acts on the UI, not the wire, so pair it
+   with (1) to capture the raw request body.
+3. **Cloned profile + debug port (only if scripted CDP is truly required).** With Edge **fully
+   closed**, copy `…\User Data\Default` (and `Local State`) to a throwaway dir, then launch that
+   copy with `--user-data-dir=<copy> --remote-debugging-port=9222`. CDP works on the copy, but
+   **SSO may still break**: app-bound-encryption cookies and device-bound tokens often won't
+   decrypt in a copied profile, and Conditional Access may re-challenge.
+
 ## Token Extraction (for server-side API calls)
 
-When the user is authenticated in Edge, tokens stored in the page's `localStorage` by MSAL can
-be extracted via CDP for use in server-side API calls. This is useful for APIs that require
-managed-device Conditional Access (where Azure CLI and device code flows are blocked).
+Once you have a **CDP-connected page that is actually signed in**, tokens stored in the page's
+`localStorage` by MSAL can be extracted for use in server-side API calls. On 136+ that means an app
+the dedicated profile could sign into; for Conditional-Access apps capture via
+[Authenticated / SSO capture](#authenticated--sso-capture-edge-136) instead. This is useful for
+APIs that require managed-device Conditional Access (where Azure CLI and device code flows are
+blocked).
 
 > ⚠️ **Extracted tokens are secrets.** Never log them, paste them into PRs/issues, commit them
 > to source control, or write them to disk unencrypted. Clear shell history if tokens were
@@ -165,7 +213,9 @@ Refreshing the authenticated page triggers MSAL silent token renewal.
   conflicts and a confusing two-browser situation where tools operate on different browsers
 - **The debug port only binds on a dedicated, non-default `--user-data-dir`.** On Edge/Chrome 136+
   the port is silently ignored on the default `User Data` store, so always launch with your own
-  `--user-data-dir` (Step 2) — then you never need to close the user's Edge
+  `--user-data-dir` (Step 2) — then you never need to close the user's Edge. That dedicated dir is
+  a fresh profile with **no existing SSO**; for Conditional-Access apps use Authenticated / SSO
+  capture instead
 - **`$pid` is reserved in PowerShell** — use `$processId`, `$p`, or any other name when iterating
   over process IDs in `foreach` loops
 - **SSO redirects may land in a different tab** — use `chrome-devtools-list_pages` after navigation
