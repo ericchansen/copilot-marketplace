@@ -2,6 +2,8 @@
 // Reusable Node.js scaffolding for capturing browser network traffic via Chrome DevTools Protocol.
 // Requires: npm install ws
 // Requires: Edge/Chrome running with --remote-debugging-port=9222
+// Edge/Chrome 136+: the debug port only binds on a distinct non-default --user-data-dir (a fresh,
+//   no-SSO profile). For an authenticated session, capture via F12 HAR/Copy-as-cURL instead of CDP.
 //
 // Usage: Replace TARGET_DOMAIN and TARGET_API, add automation in the marked section, then run with node.
 

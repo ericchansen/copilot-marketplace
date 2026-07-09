@@ -21,6 +21,7 @@ allowed-tools: Bash, PowerShell
 ## Prerequisites
 
 1. Edge or Chrome running with `--remote-debugging-port=9222`. If you have an Edge/browser helper skill installed, you can use it to launch the browser.
+   - **Edge/Chrome 136+ caveat:** the debug port is **silently ignored on the default profile** (anti–cookie-theft mitigation). Bind it with a distinct, non-default `--user-data-dir` — but that is a **fresh profile with no SSO**. For an **authenticated** session (SSO / Conditional Access), skip CDP and capture with **F12 → Network → Preserve log → Copy as cURL / Save all as HAR with content**, or co-drive the real browser via a computer-use engine. (See the `edge-browser` skill's "Authenticated / SSO capture" section for detail.) Refs: <https://developer.chrome.com/blog/remote-debugging-port>, <https://crbug.com/1414669>
 2. Node.js with `ws` package: `npm install ws`
 3. User must be authenticated in the browser to the target app
 
