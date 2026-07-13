@@ -21,7 +21,7 @@ allowed-tools: Bash, PowerShell
 ## Prerequisites
 
 1. Edge or Chrome running with `--remote-debugging-port=9222`. If you have an Edge/browser helper skill installed, you can use it to launch the browser.
-   - **Edge/Chrome 136+ caveat:** CDP is **blocked on the default profile** (the debug port is silently ignored as an anti–cookie-theft mitigation). Bind it with a distinct, non-default `--user-data-dir` — but that is a **fresh profile with no SSO**. For an **authenticated** session (SSO / Conditional Access), skip CDP and capture with **F12 → Network → Preserve log → Copy as cURL / Save all as HAR with content**, or co-drive the real browser via a computer-use engine. (See the `edge-browser` skill's "Authenticated / SSO capture" section for detail.) Refs: <https://developer.chrome.com/blog/remote-debugging-port>, <https://crbug.com/1414669>
+   - **Edge/Chrome 136+ caveat:** CDP is **blocked on the default profile** (the debug port is silently ignored as an anti–cookie-theft mitigation). Bind it with a distinct, non-default `--user-data-dir` without closing the user's Edge, then verify the target app can sign in through PRT/WAM. Use **F12 → Network → Preserve log → Copy as cURL / Save all as HAR with content** only if the target app re-challenges or blocks that profile. (See the `edge-browser` skill's "Authenticated / SSO capture" section for detail.) Refs: <https://developer.chrome.com/blog/remote-debugging-port>, <https://crbug.com/1414669>
 2. Node.js 22.4+ (stable native `WebSocket`; no `ws` package or install needed)
 3. User must be authenticated in the browser to the target app
 
@@ -36,7 +36,9 @@ allowed-tools: Bash, PowerShell
 
 1. **Connect** — Read `cdp-helper.js` in this skill's directory for the reusable CDP scaffolding. Copy it, replace `TARGET_DOMAIN` and `TARGET_API` with the actual values.
 2. **Capture** — Enable `Network.enable`, listen for `Network.requestWillBeSent` events. Filter by API domain.
-3. **Trigger the action** — Use `Runtime.evaluate` to fill forms and click buttons, or ask the user to perform the action manually in their browser.
+3. **Observe by default** — Open the target page and capture its traffic without navigating, clicking,
+   or filling forms. Only trigger an action after the user explicitly authorizes it; otherwise ask
+   the user to perform the action manually.
 4. **Harvest** — Extract the captured POST body and headers (including auth tokens). Write to temp files. **Treat captured headers as secrets — never commit them.**
 5. **Replay** — Parse the captured payload, modify fields as needed, replay with `Invoke-RestMethod` or `curl`.
 

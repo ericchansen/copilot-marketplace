@@ -93,8 +93,7 @@ function httpGet(u) {
         }
       });
 
-      // === YOUR AUTOMATION HERE ===
-      // await evalJS(`document.querySelector('button.submit').click()`);
+      // Passive capture by default. Add automation only after the user authorizes the action.
 
       // Wait for either manual user action or scripted automation to trigger network calls.
       await new Promise(r => setTimeout(r, 10000));

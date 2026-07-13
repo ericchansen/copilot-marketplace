@@ -28,17 +28,17 @@ Access may re-challenge (see Critical Rules).
 > behind Entra Conditional Access use [Authenticated / SSO capture](#authenticated--sso-capture-edge-136).
 > Refs: <https://developer.chrome.com/blog/remote-debugging-port>, <https://crbug.com/1414669>
 
-1. **Use Chrome DevTools MCP only** — never Playwright MCP. Playwright launches its own Chromium
-   instance, creating a second browser that fights with Edge for port 9222.
+1. **Never use Playwright MCP with Edge.** Playwright launches its own Chromium instance, creating
+   a second browser that fights with Edge for port 9222.
 2. **Chrome DevTools MCP has its own internal browser** — it does NOT automatically connect to
    Edge on port 9222. It maintains a separate browser connection. You must verify which browser
    you're talking to (see Step 1). When Chrome DevTools MCP is on the wrong browser, use raw
    CDP calls via PowerShell + Node.js instead.
 3. **Launch your own debug profile — never touch the user's Edge.** On Edge/Chrome 136+ the debug
-   port only binds on a **dedicated, non-default `--user-data-dir`**, which is a **fresh profile
-   that does not carry your signed-in session**. Launch it on its own port alongside the user's
-   normal Edge (nothing to close). For apps behind SSO / Conditional Access this profile is not a
-   substitute for the real session — use [Authenticated / SSO capture](#authenticated--sso-capture-edge-136) (see Step 2).
+   port only binds on a **dedicated, non-default `--user-data-dir`**. Launch it on its own port
+   alongside the user's normal Edge (nothing to close), then attempt and verify PRT/WAM SSO. Fall
+   back to [Authenticated / SSO capture](#authenticated--sso-capture-edge-136) only if the target
+   app re-challenges or blocks the profile.
 4. **`$pid` is reserved in PowerShell** — when iterating over process IDs, use `$processId` or `$p`,
    never `$pid` (it's a read-only automatic variable that returns the current process ID).
 
@@ -80,12 +80,11 @@ If port 9222 is in use by something else, stop that process first or choose anot
 > does not help, and restarting the real profile with the debug port is a blocked anti-pattern.
 > Refs: <https://developer.chrome.com/blog/remote-debugging-port>, <https://crbug.com/1414669>
 
-Use this dedicated-profile launch only when a **fresh sign-in is acceptable**. The dedicated dir
-runs as its own Chromium instance, so it never touches — and never needs you to close — the user's
-normal Edge. The fresh profile starts signed-out; some work apps then sign in silently via the
-device Primary Refresh Token (PRT) / WAM broker, but **apps behind Entra Conditional Access /
-device-compliance often re-challenge or block a fresh profile** — for those, do not use CDP here,
-use [Authenticated / SSO capture](#authenticated--sso-capture-edge-136).
+The dedicated dir runs as its own Chromium instance, so it never touches — and never needs you to
+close — the user's normal Edge. It starts without the existing browser profile, but the device
+Primary Refresh Token (PRT) / WAM broker can silently sign the target app in. Attempt that path,
+then verify it in Step 4. Only when the app actually re-challenges or blocks the profile use
+[Authenticated / SSO capture](#authenticated--sso-capture-edge-136).
 
 ```powershell
 # Dedicated debug profile: its own user-data-dir + port. Nothing to kill.
@@ -125,9 +124,18 @@ signed-in profile with the debug port and attach CDP directly
 (`msedge --remote-debugging-port=9222 --profile-directory=Default --restore-last-session`). That
 preserved full SSO, but is **silently ignored on 136+** — do not use it on current Edge.
 
-### Step 3: Interact with Edge
+### Step 3: Choose the interaction level
 
-Use **Chrome DevTools MCP tools** (not Playwright):
+First compare `chrome-devtools-list_pages` with `http://127.0.0.1:9222/json`. Chrome DevTools MCP
+can operate on Edge only when both identify the same page; otherwise use raw CDP with the native
+`WebSocket` path in [Gotchas](#gotchas).
+
+- **Passive observation (default):** list pages, inspect snapshots, and capture network traffic.
+  Opening a record to capture traffic does not authorize navigation, clicks, or form fills.
+- **Navigation or form automation:** do it only after the user explicitly authorizes that action.
+  Use raw CDP when MCP is attached to another browser.
+
+When Chrome DevTools MCP identity is verified, its tools include:
 - `chrome-devtools-list_pages` — see open tabs
 - `chrome-devtools-navigate_page` — go to a URL
 - `chrome-devtools-take_snapshot` — get page content (element refs for clicking)
@@ -138,8 +146,7 @@ Use **Chrome DevTools MCP tools** (not Playwright):
 
 ### Step 4: Verify the work account is signed in
 
-After connecting, confirm the expected account is signed in (the dedicated profile signs in
-silently via the device PRT):
+After opening the target app, confirm the expected account and page content are visible:
 
 ```powershell
 $pages = Invoke-RestMethod -Uri "http://127.0.0.1:9222/json"
@@ -147,6 +154,9 @@ $pages | Where-Object { $_.type -eq "page" } | ForEach-Object {
     Write-Host "$($_.title) — $($_.url.Substring(0, [Math]::Min($_.url.Length, 80)))"
 }
 ```
+
+If the target shows a sign-in, Conditional Access, or device-compliance challenge, the PRT/WAM
+attempt did not complete; use [Authenticated / SSO capture](#authenticated--sso-capture-edge-136).
 
 ## Authenticated / SSO capture (Edge 136+)
 
@@ -170,45 +180,19 @@ these, in order:
 
 ## Token Extraction (for server-side API calls)
 
-Once you have a **CDP-connected page that is actually signed in**, tokens stored in the page's
-`localStorage` by MSAL can be extracted for use in server-side API calls. On 136+ that means an app
-the dedicated profile could sign into; for Conditional-Access apps capture via
-[Authenticated / SSO capture](#authenticated--sso-capture-edge-136) instead. This is useful for
-APIs that require managed-device Conditional Access (where Azure CLI and device code flows are
-blocked).
+Once you have a **CDP-connected page that is actually signed in**, an app can read MSAL tokens from
+`localStorage` for server-side API calls. On 136+ that means an app the dedicated profile could
+sign into; for Conditional-Access apps capture via
+[Authenticated / SSO capture](#authenticated--sso-capture-edge-136) instead.
 
 > ⚠️ **Extracted tokens are secrets.** Never log them, paste them into PRs/issues, commit them
 > to source control, or write them to disk unencrypted. Clear shell history if tokens were
 > displayed. Tokens expire in ~60-90 minutes — treat them as short-lived credentials.
 
-First compare `chrome-devtools-list_pages` with `http://127.0.0.1:9222/json`. Use
-`chrome-devtools-evaluate_script` only when both show the same page. If they differ, Chrome
-DevTools MCP is attached to another browser; send the script below through raw-CDP
-`Runtime.evaluate` instead (see the raw-CDP workaround in [Gotchas](#gotchas)).
-
-```javascript
-(() => {
-    const tokens = {};
-    for (const k of Object.keys(localStorage)) {
-        try {
-            const v = JSON.parse(localStorage.getItem(k));
-            if (v.secret && v.target) {
-                const exp = parseInt(v.expires_on || v.expiresOn || v.extended_expires_on || "0");
-                const now = Math.floor(Date.now() / 1000);
-                const minLeft = exp > 0 ? Math.round((exp - now) / 60) : 999;
-                tokens[v.target.substring(0, 50)] = {
-                    token: v.secret,
-                    minutesLeft: minLeft,
-                    expired: minLeft < 0
-                };
-            }
-        } catch (e) {}
-    }
-    return JSON.stringify(tokens);
-})()
-```
-
-Refreshing the authenticated page triggers MSAL silent token renewal.
+Use raw-CDP `Runtime.evaluate` when MCP identity differs. The consumer-specific setup must write
+the result directly to its protected token file and log only the destination path, token presence,
+and expiry; never return or print token values. This marketplace does not define a shared token-file
+format or destination. Refreshing the authenticated page triggers MSAL silent token renewal.
 
 ## Gotchas
 
