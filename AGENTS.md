@@ -82,6 +82,12 @@ allowed-tools: Bash, PowerShell
 (`vX.Y.Z`) must match `metadata.version` in `marketplace.json` (enforced by the
 Release workflow). Bump, tag, and push to publish.
 
+Any change under `plugins/<name>/` that affects shipped plugin behavior or content
+must bump that plugin's SemVer in the same PR. Use a patch bump by default; use
+minor or major only when feature or breaking-change semantics require it.
+Synchronize every version-bearing plugin manifest and marketplace catalog entry,
+run the existing validation, and verify no version surface was missed.
+
 ## Formatting
 
 File formatting is enforced by [editorconfig-checker](https://github.com/editorconfig-checker/editorconfig-checker)
