@@ -181,7 +181,10 @@ blocked).
 > to source control, or write them to disk unencrypted. Clear shell history if tokens were
 > displayed. Tokens expire in ~60-90 minutes — treat them as short-lived credentials.
 
-Use `chrome-devtools-evaluate_script` to extract tokens:
+First compare `chrome-devtools-list_pages` with `http://127.0.0.1:9222/json`. Use
+`chrome-devtools-evaluate_script` only when both show the same page. If they differ, Chrome
+DevTools MCP is attached to another browser; send the script below through raw-CDP
+`Runtime.evaluate` instead (see the raw-CDP workaround in [Gotchas](#gotchas)).
 
 ```javascript
 (() => {
@@ -243,6 +246,6 @@ Refreshing the authenticated page triggers MSAL silent token renewal.
   ```
 
   **Workaround:** When Chrome DevTools MCP is on the wrong browser, use raw CDP
-  endpoints via PowerShell + Node.js with the `ws` package for Edge interactions.
+  endpoints via PowerShell + Node.js 22.4+ native `WebSocket` for Edge interactions.
   Connect a WebSocket to the page's `webSocketDebuggerUrl` (from `http://127.0.0.1:9222/json`)
   and send `Runtime.evaluate` commands to run JavaScript in the page context.
