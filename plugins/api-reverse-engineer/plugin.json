@@ -1,7 +1,7 @@
 {
   "name": "api-reverse-engineer",
   "description": "Capture browser network requests through Chrome DevTools Protocol when a web UI is the only reliable API reference.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "Eric Hansen",
     "url": "https://github.com/ericchansen"
