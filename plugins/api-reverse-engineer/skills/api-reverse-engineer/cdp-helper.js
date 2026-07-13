@@ -1,13 +1,12 @@
 // CDP Network Interception Helper
 // Reusable Node.js scaffolding for capturing browser network traffic via Chrome DevTools Protocol.
-// Requires: npm install ws
+// Requires: Node.js 22.4+ stable native WebSocket (no npm install)
 // Requires: Edge/Chrome running with --remote-debugging-port=9222
 // Edge/Chrome 136+: the debug port only binds on a distinct non-default --user-data-dir (a fresh,
 //   no-SSO profile). For an authenticated session, capture via F12 HAR/Copy-as-cURL instead of CDP.
 //
 // Usage: Replace TARGET_DOMAIN and TARGET_API, add automation in the marked section, then run with node.
 
-const WebSocket = require('ws');
 const http = require('http');
 const fs = require('fs');
 const os = require('os');
@@ -56,12 +55,12 @@ function httpGet(u) {
   function send(m, p = {}) {
     return new Promise((r, j) => {
       const i = ++mid;
-      const t = setTimeout(() => { ws.off('message', h); j(new Error('timeout')); }, 20000);
-      const h = d => {
-        const msg = JSON.parse(d.toString());
-        if (msg.id === i) { clearTimeout(t); ws.off('message', h); r(msg.result); }
+      const t = setTimeout(() => { ws.removeEventListener('message', h); j(new Error('timeout')); }, 20000);
+      const h = event => {
+        const msg = JSON.parse(event.data);
+        if (msg.id === i) { clearTimeout(t); ws.removeEventListener('message', h); r(msg.result); }
       };
-      ws.on('message', h);
+      ws.addEventListener('message', h);
       ws.send(JSON.stringify({ id: i, method: m, params: p }));
     });
   }
@@ -70,14 +69,14 @@ function httpGet(u) {
     return (await send('Runtime.evaluate', { expression: e, returnByValue: true })).result.value;
   }
 
-  ws.on('open', async () => {
+  ws.addEventListener('open', async () => {
     let exitCode = 0;
     try {
       await send('Network.enable', {});
       const captured = [];
-      ws.on('message', raw => {
+      ws.addEventListener('message', event => {
         try {
-          const msg = JSON.parse(raw.toString());
+          const msg = JSON.parse(event.data);
           if (msg.method === 'Network.requestWillBeSent') {
             const req = msg.params.request;
             if (req.url.includes('TARGET_API')) {

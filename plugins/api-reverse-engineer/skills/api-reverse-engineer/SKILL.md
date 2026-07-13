@@ -21,8 +21,8 @@ allowed-tools: Bash, PowerShell
 ## Prerequisites
 
 1. Edge or Chrome running with `--remote-debugging-port=9222`. If you have an Edge/browser helper skill installed, you can use it to launch the browser.
-   - **Edge/Chrome 136+ caveat:** the debug port is **silently ignored on the default profile** (anti–cookie-theft mitigation). Bind it with a distinct, non-default `--user-data-dir` — but that is a **fresh profile with no SSO**. For an **authenticated** session (SSO / Conditional Access), skip CDP and capture with **F12 → Network → Preserve log → Copy as cURL / Save all as HAR with content**, or co-drive the real browser via a computer-use engine. (See the `edge-browser` skill's "Authenticated / SSO capture" section for detail.) Refs: <https://developer.chrome.com/blog/remote-debugging-port>, <https://crbug.com/1414669>
-2. Node.js with `ws` package: `npm install ws`
+   - **Edge/Chrome 136+ caveat:** CDP is **blocked on the default profile** (the debug port is silently ignored as an anti–cookie-theft mitigation). Bind it with a distinct, non-default `--user-data-dir` — but that is a **fresh profile with no SSO**. For an **authenticated** session (SSO / Conditional Access), skip CDP and capture with **F12 → Network → Preserve log → Copy as cURL / Save all as HAR with content**, or co-drive the real browser via a computer-use engine. (See the `edge-browser` skill's "Authenticated / SSO capture" section for detail.) Refs: <https://developer.chrome.com/blog/remote-debugging-port>, <https://crbug.com/1414669>
+2. Node.js 22.4+ (stable native `WebSocket`; no `ws` package or install needed)
 3. User must be authenticated in the browser to the target app
 
 ## Authorization and Data Handling
@@ -49,7 +49,7 @@ allowed-tools: Bash, PowerShell
 
 ## Pitfalls
 
-1. All `send()` calls must be inside `ws.on('open', ...)` — #1 cause of `readyState 0` errors
+1. All `send()` calls must be inside the WebSocket `open` handler — #1 cause of `readyState 0` errors
 2. New tabs get different WebSocket URLs — re-query `/json/list` after navigation
 3. `evalJS` on void expressions (like `scrollIntoView()`) returns undefined — append `; 'ok'`
 4. React validation may be async — wait 2-5 seconds after filling before checking Submit state
