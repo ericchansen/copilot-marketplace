@@ -13,7 +13,7 @@
       "name": "api-reverse-engineer",
       "source": "plugins/api-reverse-engineer",
       "description": "Capture browser network requests through Chrome DevTools Protocol when a web UI is the only reliable API reference.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "azure-doctor",
@@ -37,7 +37,7 @@
       "name": "edge-browser",
       "source": "plugins/edge-browser",
       "description": "Launch Microsoft Edge with a specific user profile and remote debugging enabled for CDP control.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "git-code-review",
