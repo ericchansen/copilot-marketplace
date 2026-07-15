@@ -85,7 +85,7 @@
       "name": "foundry-image-gen",
       "source": { "source": "local", "path": "./plugins/foundry-image-gen" },
       "interface": { "displayName": "Foundry Image Gen" },
-      "description": "Generate images using GPT-Image-2 deployed in Azure AI Foundry.",
+      "description": "Generate and edit images using GPT-Image-2 deployed in Azure AI Foundry.",
       "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
       "category": "AI"
     }
