@@ -1,10 +1,11 @@
 // Extension: foundry-image-gen
 // Provides a generate_image tool backed by GPT-Image-2 in Azure AI Foundry.
 
-import { joinSession } from "@github/copilot-sdk/extension";
+import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import { writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { join, basename } from "node:path";
+import { writeFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, truncateSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, basename, resolve } from "node:path";
 
 // ── Config ──────────────────────────────────────────────────────────────────
 // Override per machine via env vars; defaults target Eric's Foundry resource.
@@ -13,9 +14,9 @@ import { join, basename } from "node:path";
 // Trim env values so a stray trailing newline/space (common on copy-paste) doesn't
 // break the URL or the subscription GUID guard.
 const envOr = (name, fallback) => process.env[name]?.trim() || fallback;
-const ENDPOINT = envOr("FOUNDRY_IMAGE_ENDPOINT", "https://foundry-eg6typ.cognitiveservices.azure.com");
+const ENDPOINT = envOr("FOUNDRY_IMAGE_ENDPOINT", "https://foundry-eg6typ.openai.azure.com");
 const DEPLOYMENT = envOr("FOUNDRY_IMAGE_DEPLOYMENT", "gpt-image-2");
-const API_VERSION = envOr("FOUNDRY_IMAGE_API_VERSION", "2025-04-01-preview");
+const API_VERSION = envOr("FOUNDRY_IMAGE_API_VERSION", "preview");
 const SUBSCRIPTION = envOr("FOUNDRY_IMAGE_SUBSCRIPTION", "9450bd3b-96c5-48b2-bfdf-3374304efbd7");
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -32,10 +33,52 @@ function getEntraToken() {
     ).trim();
 }
 
-async function callImageApi(token, prompt, size, quality) {
-    const url = `${ENDPOINT}/openai/deployments/${DEPLOYMENT}/images/generations?api-version=${API_VERSION}`;
-    const body = JSON.stringify({ prompt, n: 1, size, quality, output_format: "png" });
-    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+function validateReferenceImages(paths) {
+    if (paths === undefined) return [];
+    if (!Array.isArray(paths) || paths.length < 1 || paths.length > 5) {
+        throw new Error("reference_images must contain 1 to 5 local paths");
+    }
+
+    return paths.map((path) => {
+        if (typeof path !== "string" || !path.trim()) throw new Error("Each reference image path must be a non-empty string");
+        const fullPath = resolve(path);
+        if (!existsSync(fullPath)) throw new Error(`Reference image not found: ${path}`);
+        const file = statSync(fullPath);
+        if (!file.isFile()) throw new Error(`Reference image not found: ${path}`);
+        if (file.size >= 50 * 1024 * 1024) throw new Error(`Reference image must be under 50 MB: ${path}`);
+
+        const data = readFileSync(fullPath);
+        const png = data.length >= 8 && data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+        const jpeg = data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff;
+        if (!png && !jpeg) throw new Error(`Reference image must be PNG or JPEG: ${path}`);
+        return { data, name: basename(fullPath), type: png ? "image/png" : "image/jpeg" };
+    });
+}
+
+function buildEditBody(prompt, size, quality, references, inputFidelity) {
+    const body = new FormData();
+    body.append("model", DEPLOYMENT);
+    body.append("prompt", prompt);
+    body.append("n", "1");
+    body.append("size", size);
+    body.append("quality", quality);
+    body.append("output_format", "png");
+    body.append("input_fidelity", inputFidelity);
+    for (const image of references) body.append("image[]", new Blob([image.data], { type: image.type }), image.name);
+    return body;
+}
+
+const imageApiUrl = (operation) =>
+    `${ENDPOINT.replace(/\/+$/, "")}/openai/v1/images/${operation}?api-version=${encodeURIComponent(API_VERSION)}`;
+
+async function callImageApi(token, prompt, size, quality, references, inputFidelity) {
+    const operation = references.length ? "edits" : "generations";
+    const url = imageApiUrl(operation);
+    const body = references.length
+        ? buildEditBody(prompt, size, quality, references, inputFidelity)
+        : JSON.stringify({ model: DEPLOYMENT, prompt, n: 1, size, quality, output_format: "png" });
+    const headers = { Authorization: `Bearer ${token}` };
+    if (!references.length) headers["Content-Type"] = "application/json";
 
     const res = await fetch(url, { method: "POST", headers, body });
 
@@ -50,13 +93,43 @@ async function callImageApi(token, prompt, size, quality) {
     return res.json();
 }
 
+function runSelfTest() {
+    const dir = mkdtempSync(join(tmpdir(), "foundry-image-gen-"));
+    try {
+        const png = join(dir, "reference.png");
+        const jpg = join(dir, "style.jpg");
+        const oversized = join(dir, "oversized.png");
+        writeFileSync(png, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+        writeFileSync(jpg, Buffer.from([0xff, 0xd8, 0xff]));
+        writeFileSync(oversized, "");
+        truncateSync(oversized, 50 * 1024 * 1024 + 1);
+        const references = validateReferenceImages([png, jpg]);
+        const body = buildEditBody("test", "1024x1024", "high", references, "high");
+        assert.equal(body.getAll("image[]").length, 2);
+        assert.equal(body.get("input_fidelity"), "high");
+        assert.match(imageApiUrl("edits"), /\/openai\/v1\/images\/edits\?api-version=/);
+        assert.throws(() => validateReferenceImages([]), /1 to 5/);
+        assert.throws(() => validateReferenceImages([join(dir, "missing.png")]), /not found/);
+        assert.throws(() => validateReferenceImages([oversized]), /under 50 MB/);
+        console.log("foundry-image-gen reference image check passed");
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+}
+
+if (process.argv.includes("--self-test")) {
+    runSelfTest();
+    process.exit(0);
+}
+
 // ── Session ─────────────────────────────────────────────────────────────────
+const { joinSession } = await import("@github/copilot-sdk/extension");
 const session = await joinSession({
     tools: [
         {
             name: "generate_image",
             description:
-                "Generate an image using GPT-Image-2 in Azure AI Foundry. " +
+                "Generate or edit an image using GPT-Image-2 in Azure AI Foundry. " +
                 "Returns the file path of the saved PNG. " +
                 "Good for diagrams, illustrations, slide visuals, concept art, logos, and mockups.",
             parameters: {
@@ -73,6 +146,18 @@ const session = await joinSession({
                         description: "Image quality",
                         enum: ["low", "medium", "high"],
                     },
+                    reference_images: {
+                        type: "array",
+                        description: "One to five local PNG or JPEG paths to use as edit references",
+                        items: { type: "string" },
+                        minItems: 1,
+                        maxItems: 5,
+                    },
+                    input_fidelity: {
+                        type: "string",
+                        description: "Reference-image fidelity for edits (defaults to high)",
+                        enum: ["low", "high"],
+                    },
                     filename: { type: "string", description: "Output filename without extension" },
                 },
                 required: ["prompt"],
@@ -82,8 +167,16 @@ const session = await joinSession({
                 const size = args.size || "1024x1024";
                 const quality = args.quality || "high";
                 const filename = args.filename || "generated-image";
+                const inputFidelity = args.input_fidelity || "high";
 
-                await session.log(`Generating image...`, { ephemeral: true });
+                let references;
+                try {
+                    references = validateReferenceImages(args.reference_images);
+                } catch (e) {
+                    return { textResultForLlm: `Invalid reference images: ${e.message}`, resultType: "failure" };
+                }
+
+                await session.log(`${references.length ? "Editing" : "Generating"} image...`, { ephemeral: true });
 
                 let token;
                 try {
@@ -94,7 +187,7 @@ const session = await joinSession({
 
                 let result;
                 try {
-                    result = await callImageApi(token, prompt, size, quality);
+                    result = await callImageApi(token, prompt, size, quality, references, inputFidelity);
                 } catch (e) {
                     return { textResultForLlm: `Image generation failed: ${e.message}`, resultType: "failure" };
                 }
@@ -122,7 +215,8 @@ const session = await joinSession({
                 }
 
                 await session.log(`Image saved: ${outPath}`);
-                return `Image saved to: ${outPath}\nPrompt: ${prompt}\nSize: ${size} | Quality: ${quality}`;
+                const editDetails = references.length ? ` | References: ${references.length} | Fidelity: ${inputFidelity}` : "";
+                return `Image saved to: ${outPath}\nPrompt: ${prompt}\nSize: ${size} | Quality: ${quality}${editDetails}`;
             },
         },
     ],
