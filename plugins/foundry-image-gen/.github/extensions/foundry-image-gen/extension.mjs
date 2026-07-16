@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
 import { writeFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, truncateSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, basename, resolve } from "node:path";
+import { join, basename, isAbsolute, relative, resolve } from "node:path";
 
 // ── Config ──────────────────────────────────────────────────────────────────
 // Override per machine via env vars; defaults target Eric's Foundry resource.
@@ -43,6 +43,10 @@ function validateReferenceImages(paths, baseDir = process.cwd()) {
         if (typeof path !== "string" || !path.trim()) throw new Error("Each reference image path must be a non-empty string");
         const cleanPath = path.trim();
         const fullPath = resolve(baseDir, cleanPath);
+        const fromBase = relative(baseDir, fullPath);
+        if (!isAbsolute(cleanPath) && (/^\.\.(?:[\\/]|$)/.test(fromBase) || isAbsolute(fromBase))) {
+            throw new Error(`Relative reference image path escapes the workspace: ${cleanPath}`);
+        }
         if (!existsSync(fullPath)) throw new Error(`Reference image not found: ${cleanPath}`);
         const file = statSync(fullPath);
         if (!file.isFile()) throw new Error(`Reference image not found: ${cleanPath}`);
@@ -112,6 +116,7 @@ function runSelfTest() {
         assert.throws(() => validateReferenceImages([]), /1 to 5/);
         assert.throws(() => validateReferenceImages([join(dir, "missing.png")]), /not found/);
         assert.throws(() => validateReferenceImages([oversized]), /under 50 MB/);
+        assert.throws(() => validateReferenceImages(["../reference.png"], join(dir, "workspace")), /escapes the workspace/);
         console.log("foundry-image-gen reference image check passed");
     } finally {
         rmSync(dir, { recursive: true, force: true });
