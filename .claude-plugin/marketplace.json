@@ -73,7 +73,7 @@
       "name": "foundry-image-gen",
       "source": "plugins/foundry-image-gen",
       "description": "Generate and edit images using GPT-Image-2 deployed in Azure AI Foundry.",
-      "version": "0.1.1"
+      "version": "0.1.2"
     }
   ]
 }
