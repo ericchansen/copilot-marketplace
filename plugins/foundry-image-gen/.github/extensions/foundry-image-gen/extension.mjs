@@ -33,7 +33,7 @@ function getEntraToken() {
     ).trim();
 }
 
-function validateReferenceImages(paths) {
+function validateReferenceImages(paths, baseDir = process.cwd()) {
     if (paths === undefined) return [];
     if (!Array.isArray(paths) || paths.length < 1 || paths.length > 5) {
         throw new Error("reference_images must contain 1 to 5 local paths");
@@ -41,16 +41,17 @@ function validateReferenceImages(paths) {
 
     return paths.map((path) => {
         if (typeof path !== "string" || !path.trim()) throw new Error("Each reference image path must be a non-empty string");
-        const fullPath = resolve(path);
-        if (!existsSync(fullPath)) throw new Error(`Reference image not found: ${path}`);
+        const cleanPath = path.trim();
+        const fullPath = resolve(baseDir, cleanPath);
+        if (!existsSync(fullPath)) throw new Error(`Reference image not found: ${cleanPath}`);
         const file = statSync(fullPath);
-        if (!file.isFile()) throw new Error(`Reference image not found: ${path}`);
-        if (file.size >= 50 * 1024 * 1024) throw new Error(`Reference image must be under 50 MB: ${path}`);
+        if (!file.isFile()) throw new Error(`Reference image not found: ${cleanPath}`);
+        if (file.size >= 50 * 1024 * 1024) throw new Error(`Reference image must be under 50 MB: ${cleanPath}`);
 
         const data = readFileSync(fullPath);
         const png = data.length >= 8 && data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
         const jpeg = data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff;
-        if (!png && !jpeg) throw new Error(`Reference image must be PNG or JPEG: ${path}`);
+        if (!png && !jpeg) throw new Error(`Reference image must be PNG or JPEG: ${cleanPath}`);
         return { data, name: basename(fullPath), type: png ? "image/png" : "image/jpeg" };
     });
 }
@@ -103,7 +104,7 @@ function runSelfTest() {
         writeFileSync(jpg, Buffer.from([0xff, 0xd8, 0xff]));
         writeFileSync(oversized, "");
         truncateSync(oversized, 50 * 1024 * 1024 + 1);
-        const references = validateReferenceImages([png, jpg]);
+        const references = validateReferenceImages([`  ${png}  `, "style.jpg"], dir);
         const body = buildEditBody("test", "1024x1024", "high", references, "high");
         assert.equal(body.getAll("image[]").length, 2);
         assert.equal(body.get("input_fidelity"), "high");
@@ -171,7 +172,7 @@ const session = await joinSession({
 
                 let references;
                 try {
-                    references = validateReferenceImages(args.reference_images);
+                    references = validateReferenceImages(args.reference_images, session.workspacePath || process.cwd());
                 } catch (e) {
                     return { textResultForLlm: `Invalid reference images: ${e.message}`, resultType: "failure" };
                 }
