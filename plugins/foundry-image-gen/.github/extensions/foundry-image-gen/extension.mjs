@@ -3,7 +3,7 @@
 
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
-import { writeFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, truncateSync, existsSync } from "node:fs";
+import { writeFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, truncateSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, basename, isAbsolute, relative, resolve } from "node:path";
 
@@ -43,16 +43,21 @@ function validateReferenceImages(paths, baseDir = process.cwd()) {
         if (typeof path !== "string" || !path.trim()) throw new Error("Each reference image path must be a non-empty string");
         const cleanPath = path.trim();
         const fullPath = resolve(baseDir, cleanPath);
+        const escapesBase = (path) => /^\.\.(?:[\\/]|$)/.test(path) || isAbsolute(path);
         const fromBase = relative(baseDir, fullPath);
-        if (!isAbsolute(cleanPath) && (/^\.\.(?:[\\/]|$)/.test(fromBase) || isAbsolute(fromBase))) {
+        if (!isAbsolute(cleanPath) && escapesBase(fromBase)) {
             throw new Error(`Relative reference image path escapes the workspace: ${cleanPath}`);
         }
         if (!existsSync(fullPath)) throw new Error(`Reference image not found: ${cleanPath}`);
-        const file = statSync(fullPath);
-        if (!file.isFile()) throw new Error(`Reference image not found: ${cleanPath}`);
+        const realPath = realpathSync(fullPath);
+        if (!isAbsolute(cleanPath) && escapesBase(relative(realpathSync(baseDir), realPath))) {
+            throw new Error(`Relative reference image path escapes the workspace: ${cleanPath}`);
+        }
+        const file = statSync(realPath);
+        if (!file.isFile()) throw new Error(`Reference image is not a file: ${cleanPath}`);
         if (file.size >= 50 * 1024 * 1024) throw new Error(`Reference image must be under 50 MB: ${cleanPath}`);
 
-        const data = readFileSync(fullPath);
+        const data = readFileSync(realPath);
         const png = data.length >= 8 && data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
         const jpeg = data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff;
         if (!png && !jpeg) throw new Error(`Reference image must be PNG or JPEG: ${cleanPath}`);
@@ -104,10 +109,16 @@ function runSelfTest() {
         const png = join(dir, "reference.png");
         const jpg = join(dir, "style.jpg");
         const oversized = join(dir, "oversized.png");
+        const outside = join(dir, "outside");
+        const workspace = join(dir, "workspace");
         writeFileSync(png, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
         writeFileSync(jpg, Buffer.from([0xff, 0xd8, 0xff]));
         writeFileSync(oversized, "");
         truncateSync(oversized, 50 * 1024 * 1024 + 1);
+        mkdirSync(outside);
+        mkdirSync(workspace);
+        writeFileSync(join(outside, "reference.png"), readFileSync(png));
+        symlinkSync(outside, join(workspace, "outside"), "junction");
         const references = validateReferenceImages([`  ${png}  `, "style.jpg"], dir);
         const body = buildEditBody("test", "1024x1024", "high", references, "high");
         assert.equal(body.getAll("image[]").length, 2);
@@ -116,7 +127,9 @@ function runSelfTest() {
         assert.throws(() => validateReferenceImages([]), /1 to 5/);
         assert.throws(() => validateReferenceImages([join(dir, "missing.png")]), /not found/);
         assert.throws(() => validateReferenceImages([oversized]), /under 50 MB/);
-        assert.throws(() => validateReferenceImages(["../reference.png"], join(dir, "workspace")), /escapes the workspace/);
+        assert.throws(() => validateReferenceImages(["../reference.png"], workspace), /escapes the workspace/);
+        assert.throws(() => validateReferenceImages(["outside/reference.png"], workspace), /escapes the workspace/);
+        assert.throws(() => validateReferenceImages([workspace]), /not a file/);
         console.log("foundry-image-gen reference image check passed");
     } finally {
         rmSync(dir, { recursive: true, force: true });
