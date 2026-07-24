@@ -88,6 +88,14 @@ minor or major only when feature or breaking-change semantics require it.
 Synchronize every version-bearing plugin manifest and catalog entry, run the
 existing validation, and verify no version surface was missed.
 
+## Task Delivery
+
+For completed code or documentation tasks, automatically commit the changes,
+push the feature branch, and create a pull request. Do not stop after local
+changes or wait for a separate request or confirmation to open the pull request.
+Never push directly to the default branch, never merge the pull request, and
+surface any genuine blocker that prevents delivery.
+
 ## Formatting
 
 File formatting is enforced by [editorconfig-checker](https://github.com/editorconfig-checker/editorconfig-checker)
