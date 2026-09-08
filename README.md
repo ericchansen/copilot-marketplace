@@ -67,6 +67,7 @@ field.
 - `clean` — Perform post-merge git cleanup by returning to main/master, pulling latest, deleting merged branches, pruning remotes, and verifying a clean state.
 - `doc-generator` — Generate professional PDF and Word (DOCX) documents from markdown source files.
 - `edge-browser` — Control Microsoft Edge over CDP, on a dedicated debug profile or on the real signed-in profile via Edge's in-browser remote-debugging opt-in.
+- [`fantasy-sports`](plugins/fantasy-sports/skills/fantasy-sports/SKILL.md) — Manage fantasy teams and separate Pick'em entries with verified league rules, current evidence, bounded action permissions, and private state templates.
 - `foundry-image-gen` — Generate and edit images with GPT-Image-2/2.5, FLUX.2-flex, and MAI-Image-2.5-Pro/2.6 in Microsoft Foundry; optionally resume batches, compare selected models, and export offline galleries.
 - `git-code-review` — Run a structured closeout review over local, branch, commit, or PR diffs before shipping.
 - `git-commit` — Curate conventional commits and autosquashed, rebase-ready history before pushes and PR updates.
@@ -132,6 +133,29 @@ copy has been exercised in a fresh session. Then explicitly choose one active
 copy per skill to avoid duplicate discovery; do not overwrite, delete, or repoint
 an active skill as part of packaging. Recordings, transcripts, speaker maps,
 screenshots, credentials, model weights, and caches must remain outside plugins.
+
+### Fantasy sports
+
+Install through the [harness instructions above](#install), using
+`fantasy-sports` as the plugin name. In Copilot CLI or Claude Code:
+
+```text
+/plugin marketplace add ericchansen/copilot-marketplace
+/plugin install fantasy-sports@copilot-marketplace
+```
+
+Then ask: "Use fantasy-sports to review my Yahoo fantasy lineup; recommend
+only" or "Use fantasy-sports to review my Pick'em spread card and tiebreakers
+separately." See the [skill and workflow references](plugins/fantasy-sports/skills/fantasy-sports/SKILL.md)
+for draft prep, lineups, waivers/FAAB, trades, matchups and results tracking.
+Other sports/providers require their own observed rules and supported access;
+this plugin does not bundle provider APIs or browser tooling.
+
+Installing on another PC carries the skill and blank templates, **not**
+browser login, league state, team authorization or background monitoring.
+The [private state template](plugins/fantasy-sports/skills/fantasy-sports/assets/private-league-state.template.md)
+must remain blank in Git; populated copies need a user-approved private,
+Git-excluded/untracked destination. No global setup is required by the skill.
 
 ## Repository structure
 
