@@ -1,0 +1,6 @@
+{
+  "name": "fantasy-sports",
+  "version": "0.1.0",
+  "description": "Manage fantasy sports and separate Pick'em workflows with league-specific evidence, bounded permissions, and verified results.",
+  "skills": "./skills/"
+}

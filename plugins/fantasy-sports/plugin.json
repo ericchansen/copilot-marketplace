@@ -1,0 +1,8 @@
+{
+  "name": "fantasy-sports",
+  "description": "Manage fantasy sports and separate Pick'em workflows with league-specific evidence, bounded permissions, and verified results.",
+  "version": "0.1.0",
+  "repository": "https://github.com/ericchansen/copilot-marketplace",
+  "license": "MIT",
+  "skills": "skills/"
+}
