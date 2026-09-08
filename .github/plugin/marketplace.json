@@ -40,6 +40,12 @@
       "version": "0.1.1"
     },
     {
+      "name": "fantasy-sports",
+      "source": "plugins/fantasy-sports",
+      "description": "Manage fantasy sports and separate Pick'em workflows with league-specific evidence, bounded permissions, and verified results.",
+      "version": "0.1.0"
+    },
+    {
       "name": "git-code-review",
       "source": "plugins/git-code-review",
       "description": "Run a structured closeout review over local, branch, commit, or PR diffs before shipping.",
