@@ -168,3 +168,16 @@ jobs:
           done
           [ $errors -gt 0 ] && exit 1
           echo "✓ Codex plugin manifests valid and in sync with plugin.json"
+
+  test-ti-fantasy:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Test packaged TI fantasy analyzer
+        run: node --test plugins/ti-2026-fantasy-advisor/skills/ti-2026-fantasy-advisor/tools/horizon-analyzer.test.js

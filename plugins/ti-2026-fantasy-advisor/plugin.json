@@ -1,7 +1,7 @@
 {
-  "name": "github-writer",
-  "description": "Write PRs, issues, and comments for GitHub with encoding-safe body files and sanitized, structured content.",
-  "version": "0.1.2",
+  "name": "ti-2026-fantasy-advisor",
+  "version": "0.1.0",
+  "description": "Recommend TI 2026 Fantasy roster, Title, and War Banner moves with token-aware local analysis.",
   "author": {
     "name": "Eric Hansen",
     "url": "https://github.com/ericchansen"

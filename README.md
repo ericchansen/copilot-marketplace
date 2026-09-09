@@ -74,7 +74,41 @@ field.
 - `github-writer` — Write PRs, issues, and comments for GitHub with encoding-safe body files and sanitized, structured content.
 - `meeting-transcription` — Locally transcribe recorded meetings, identify speakers, and produce evidence-based meeting notes.
 - `pr-review-address` — Address GitHub PR feedback with origin-targeted fixups, autosquashed history, thread replies, and resolution.
+- `ti-2026-fantasy-advisor` — Recommend TI 2026 Fantasy roster, Title, and War Banner moves with token-aware local analysis.
 - `visor` — Research vehicles end to end with supported Visor retrieval, deal evaluation, market context, and evidence-gated shortlists.
+
+### Personal skill setup
+
+The marketplace includes both `meeting-transcription` and
+`ti-2026-fantasy-advisor`. Follow their bundled setup instructions:
+
+- [Meeting transcription](plugins/meeting-transcription/skills/meeting-transcription/SKILL.md)
+  requires PowerShell, `uv`, `ffmpeg`/`ffprobe`, an NVIDIA CUDA GPU, and access to
+  the gated Hugging Face diarization models. Setup installs its Python environment
+  outside the plugin; model downloads and transcription are separate runtime steps.
+- [TI 2026 Fantasy Advisor](plugins/ti-2026-fantasy-advisor/skills/ti-2026-fantasy-advisor/tools/README.md)
+  requires Node.js 20+ and no npm packages. It includes the MIT calculator,
+  tests, and explicitly synthetic fixtures, but not historical match data:
+  [upstream excludes that data from MIT](https://github.com/VirenDias/ti15-fantasy/blob/fff2663466b70cc8810d02cdbf495523098784e7/readme.md#licence).
+  Real offline analysis requires separately permitted compatible JSON supplied
+  with `--data`. See the tool README for setup and a fast smoke command.
+  Live browser access is needed for the maintained helper and current tournament
+  context, not for the bundled horizon analyzer.
+
+After the version containing a skill is published, install it using that skill's
+name in the harness-specific instructions above. For Copilot CLI or Claude Code:
+
+```text
+/plugin install meeting-transcription@copilot-marketplace
+/plugin install ti-2026-fantasy-advisor@copilot-marketplace
+```
+
+Existing manually installed user skills are not migrated by this repository.
+Keep the originals and any user-owned runtime environments until the marketplace
+copy has been exercised in a fresh session. Then explicitly choose one active
+copy per skill to avoid duplicate discovery; do not overwrite, delete, or repoint
+an active skill as part of packaging. Recordings, transcripts, speaker maps,
+screenshots, credentials, model weights, and caches must remain outside plugins.
 
 ## Repository structure
 

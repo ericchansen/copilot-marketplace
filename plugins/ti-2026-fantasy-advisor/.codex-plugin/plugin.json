@@ -1,0 +1,6 @@
+{
+  "name": "ti-2026-fantasy-advisor",
+  "version": "0.1.0",
+  "description": "Recommend TI 2026 Fantasy roster, Title, and War Banner moves with token-aware local analysis.",
+  "skills": "./skills/"
+}

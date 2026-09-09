@@ -18,6 +18,23 @@ the PR are the commits that should land on the base branch.
 3. Identify the actual base branch. For an existing PR, read its base with `gh pr view --json baseRefName -q .baseRefName`; otherwise inspect `origin/HEAD` and repository guidance. Fetch `origin` before comparing history.
 4. Run the repository's required safety or secret scan before committing or pushing. If the `git-safety-scan` skill is installed, use it.
 
+## Multi-account authentication
+
+If Git or `gh` fails unexpectedly because of authentication, run `gh auth status`
+and inspect the target repository and host before retrying. Identify the correct
+account from the repository, organization, and user context. Never switch to an
+arbitrary logged-in account; ask if the correct account is unclear.
+
+If a switch is needed, use
+`gh auth switch --hostname <host> --user <account>`, then run `gh auth status`
+again to confirm the active account. For SAML/SSO failures, confirm that the account
+has the required organization authorization. When appropriate, retry the same
+approved Git operation using an HTTPS remote and a command-scoped credential helper:
+
+```bash
+git -c credential.helper= -c 'credential.helper=!gh auth git-credential' <command> <https-remote>
+```
+
 ## Format
 
 ```

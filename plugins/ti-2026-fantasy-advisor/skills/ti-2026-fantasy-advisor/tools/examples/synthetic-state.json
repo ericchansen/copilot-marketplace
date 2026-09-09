@@ -1,0 +1,35 @@
+{
+  "_comment": "Synthetic example only. Replace every value with the user's observed state for real analysis.",
+  "period": 1,
+  "tokens": 2,
+  "trials": 3,
+  "seed": 1234,
+  "objective": "expected",
+  "candidateLimit": 2,
+  "banners": {
+    "Core": [
+      { "stat": "Kills", "quality": "Tier II", "trait": "Benevolent" },
+      { "stat": "Courier Kills", "quality": "Tier II", "trait": "Benevolent" },
+      { "stat": "Deaths", "quality": "Tier II", "trait": "Benevolent" }
+    ],
+    "Mid": [
+      { "stat": "GPM", "quality": "Tier II", "trait": "Benevolent" },
+      { "stat": "Watchers Taken", "quality": "Tier II", "trait": "Benevolent" },
+      { "stat": "Stuns", "quality": "Tier II", "trait": "Benevolent" }
+    ],
+    "Support": [
+      { "stat": "Wards Placed", "quality": "Tier II", "trait": "Benevolent" },
+      { "stat": "First Blood", "quality": "Tier II", "trait": "Benevolent" },
+      { "stat": "Lotuses Grabbed", "quality": "Tier II", "trait": "Benevolent" }
+    ]
+  },
+  "offers": [
+    "Reroll Quality for the first Red Emblem",
+    "Reroll Trait for the first Blue Emblem",
+    "Reroll Stat for the first Green Emblem"
+  ],
+  "candidates": [
+    "Reroll Roll Operations",
+    { "operation": "Reroll Quality for the first Red Emblem", "role": "Core" }
+  ]
+}
