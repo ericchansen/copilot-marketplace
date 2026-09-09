@@ -9,6 +9,8 @@ on:
 jobs:
   editorconfig:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -17,4 +19,7 @@ jobs:
           node-version: 20
 
       - name: Check file formatting against .editorconfig
-        run: npx --yes editorconfig-checker
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EC_VERSION: v4.0.1
+        run: npx --yes editorconfig-checker@6.2.0
