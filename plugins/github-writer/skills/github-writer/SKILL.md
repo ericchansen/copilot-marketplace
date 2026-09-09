@@ -25,7 +25,9 @@ Check the active account matches the target repo:
 ```powershell
 gh auth status
 ```
-Switch if needed (see Multi-Account Git Authentication in copilot-instructions.md).
+Switch only to the task-appropriate account; ask if it is ambiguous. The
+`git-commit` skill's **Multi-account authentication** section covers auth failures
+and SSO retries.
 
 ### 2. Compose the Content
 

@@ -1,0 +1,118 @@
+{
+  "_comment": "Fictional test data, not tournament observations. Rule definitions follow the MIT helper attributed in ../vendor/README.md.",
+  "meta": {
+    "synthetic": true,
+    "generated": "synthetic test fixture",
+    "period": 1,
+    "p3": 0.5,
+    "n_values": [4, 5, 6],
+    "n_median": 6,
+    "periods": {
+      "1": { "name": "Group Stage", "n_values": [4, 5, 6], "n_median": 6 },
+      "2": { "name": "Playoffs", "n_values": [2, 3, 4, 5, 6], "n_median": 4 }
+    }
+  },
+  "stats": [
+    { "col": "kills", "label": "Kills", "colour": "Red" },
+    { "col": "deaths", "label": "Deaths", "colour": "Red" },
+    { "col": "creep_score", "label": "Creep Score", "colour": "Red" },
+    { "col": "gpm", "label": "GPM", "colour": "Red" },
+    { "col": "neutral_tokens_found", "label": "Madstone Collected", "colour": "Red" },
+    { "col": "tower_kills", "label": "Tower Kills", "colour": "Red" },
+    { "col": "wards_placed", "label": "Wards Placed", "colour": "Blue" },
+    { "col": "camps_stacked", "label": "Camps Stacked", "colour": "Blue" },
+    { "col": "runes_grabbed", "label": "Runes Grabbed", "colour": "Blue" },
+    { "col": "watchers_taken", "label": "Watchers Taken", "colour": "Blue" },
+    { "col": "smokes_used", "label": "Smokes Used", "colour": "Blue" },
+    { "col": "lotuses_grabbed", "label": "Lotuses Grabbed", "colour": "Blue" },
+    { "col": "roshan_kills", "label": "Roshan Kills", "colour": "Green" },
+    { "col": "teamfight_participation", "label": "Teamfight Participation", "colour": "Green" },
+    { "col": "stuns", "label": "Stuns", "colour": "Green" },
+    { "col": "tormentor_kills", "label": "Tormentor Kills", "colour": "Green" },
+    { "col": "first_blood", "label": "First Blood", "colour": "Green" },
+    { "col": "courier_kills", "label": "Courier Kills", "colour": "Green" }
+  ],
+  "banner": {
+    "Core": ["Red", "Green", "Red"],
+    "Mid": ["Red", "Blue", "Green"],
+    "Support": ["Blue", "Green", "Blue"]
+  },
+  "qualities": [
+    { "name": "Tier I", "bonus": 10, "weight": 5 },
+    { "name": "Tier II", "bonus": 30, "weight": 4 },
+    { "name": "Tier III", "bonus": 60, "weight": 3 },
+    { "name": "Tier IV", "bonus": 100, "weight": 2 },
+    { "name": "Tier V", "bonus": 150, "weight": 1 }
+  ],
+  "traits": [
+    { "name": "Fractal", "bonus": 60, "adjacent": 0 },
+    { "name": "Benevolent", "bonus": 0, "adjacent": 20 },
+    { "name": "Vampiric", "bonus": 50, "adjacent": -10 },
+    { "name": "Unique", "bonus": 30, "adjacent": 0 },
+    { "name": "Friendly", "bonus": 50, "adjacent": 0 }
+  ],
+  "rolls": [
+    { "name": "Reroll Stat for Red Emblems", "colour": "Red", "property": "stat", "scope": "all" },
+    { "name": "Reroll Quality for Red Emblems", "colour": "Red", "property": "quality", "scope": "all" },
+    { "name": "Reroll Quality for the first Red Emblem", "colour": "Red", "property": "quality", "scope": "first" },
+    { "name": "Reroll Quality for the last Red Emblem", "colour": "Red", "property": "quality", "scope": "last" },
+    { "name": "Reroll Quality for one random Red Emblem", "colour": "Red", "property": "quality", "scope": "random" },
+    { "name": "Reroll Trait for Red Emblems", "colour": "Red", "property": "trait", "scope": "all" },
+    { "name": "Reroll Stat for Blue Emblems", "colour": "Blue", "property": "stat", "scope": "all" },
+    { "name": "Reroll Quality for Blue Emblems", "colour": "Blue", "property": "quality", "scope": "all" },
+    { "name": "Reroll Trait for Blue Emblems", "colour": "Blue", "property": "trait", "scope": "all" },
+    { "name": "Reroll Trait for the first Blue Emblem", "colour": "Blue", "property": "trait", "scope": "first" },
+    { "name": "Reroll Trait for the last Blue Emblem", "colour": "Blue", "property": "trait", "scope": "last" },
+    { "name": "Reroll Trait for one random Blue Emblem", "colour": "Blue", "property": "trait", "scope": "random" },
+    { "name": "Reroll Stat for Green Emblems", "colour": "Green", "property": "stat", "scope": "all" },
+    { "name": "Reroll Stat for the first Green Emblem", "colour": "Green", "property": "stat", "scope": "first" },
+    { "name": "Reroll Stat for the last Green Emblem", "colour": "Green", "property": "stat", "scope": "last" },
+    { "name": "Reroll Stat for one random Green Emblem", "colour": "Green", "property": "stat", "scope": "random" },
+    { "name": "Reroll Quality for Green Emblems", "colour": "Green", "property": "quality", "scope": "all" },
+    { "name": "Reroll Trait for Green Emblems", "colour": "Green", "property": "trait", "scope": "all" },
+    { "name": "Randomly increase one Quality", "colour": null, "property": "increase", "scope": "one" },
+    { "name": "Randomly increase two Qualities and reduce one", "colour": null, "property": "redistribute", "scope": "two" }
+  ],
+  "units": [
+    {
+      "team": 1,
+      "role": "Core",
+      "size": 2,
+      "pts": [
+        [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180],
+        [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190],
+        [30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200],
+        [40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210]
+      ],
+      "ind": [0, 0, 0, 0],
+      "w": [0.5, 0.5],
+      "win": [true, false]
+    },
+    {
+      "team": 1,
+      "role": "Mid",
+      "size": 1,
+      "pts": [
+        [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180],
+        [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190]
+      ],
+      "ind": [0, 0],
+      "w": [0.5, 0.5],
+      "win": [true, false]
+    },
+    {
+      "team": 1,
+      "role": "Support",
+      "size": 2,
+      "pts": [
+        [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180],
+        [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190],
+        [30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200],
+        [40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210]
+      ],
+      "ind": [0, 0, 0, 0],
+      "w": [0.5, 0.5],
+      "win": [true, false]
+    }
+  ]
+}
