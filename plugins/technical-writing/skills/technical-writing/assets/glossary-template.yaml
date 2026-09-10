@@ -1,0 +1,15 @@
+# Optional documentation aid, not an ASD dictionary or executable configuration.
+# Replace synthetic examples with verified project terms before adoption.
+schema_version: 1
+terms:
+  - preferred: worker
+    definition: A process that reads tasks from the queue in this fictional example.
+    part_of_speech: noun
+    domain: task processing
+    status: candidate
+    source: Replace with a verified repository or product reference.
+    aliases: []
+    distinct_from:
+      - client
+    notes: Do not treat this example or a proposed alias as approved terminology.
+immutable_literals: []

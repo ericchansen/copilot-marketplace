@@ -74,8 +74,31 @@ field.
 - `github-writer` — Write PRs, issues, and comments for GitHub with encoding-safe body files and sanitized, structured content.
 - `meeting-transcription` — Locally transcribe recorded meetings, identify speakers, and produce evidence-based meeting notes.
 - `pr-review-address` — Address GitHub PR feedback with origin-targeted fixups, autosquashed history, thread replies, and resolution.
+- `technical-writing` — Draft, review, and revise source-grounded technical documentation with STE-inspired clarity and meaning-preservation checks.
 - `ti-2026-fantasy-advisor` — Recommend TI 2026 Fantasy roster, Title, and War Banner moves with token-aware local analysis.
 - `visor` — Research vehicles end to end with supported Visor retrieval, deal evaluation, market context, and evidence-gated shortlists.
+
+### Technical writing
+
+The [technical-writing skill](plugins/technical-writing/skills/technical-writing/SKILL.md)
+supports source-grounded drafts, read-only reviews, and focused revisions:
+
+```text
+Use technical-writing to draft a usage guide from this repository.
+Review this runbook for ambiguity without editing files.
+Revise this API reference while preserving requirements and exact identifiers.
+```
+
+The default is STE-inspired software clarity, not strict ASD-STE100 compliance.
+An explicitly requested STE review requires an authorized source and reports its
+coverage and limits. The plugin does not bundle the standard or dictionary and
+does not claim ASD endorsement or certification. See its
+[source and rights guidance](plugins/technical-writing/skills/technical-writing/references/ste-reference.md).
+
+It needs no additional runtime packages. It includes a project glossary template
+and synthetic behavioral cases with a
+[maintainer evaluation protocol](plugins/technical-writing/skills/technical-writing/references/review-and-evaluation.md).
+Use `doc-generator` separately when the finished Markdown needs PDF or DOCX export.
 
 ### Personal skill setup
 

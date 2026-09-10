@@ -1,0 +1,12 @@
+{
+  "name": "technical-writing",
+  "description": "Draft, review, and revise source-grounded technical documentation with STE-inspired clarity and meaning-preservation checks.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Eric Hansen",
+    "url": "https://github.com/ericchansen"
+  },
+  "repository": "https://github.com/ericchansen/copilot-marketplace",
+  "license": "MIT",
+  "skills": "skills/"
+}
