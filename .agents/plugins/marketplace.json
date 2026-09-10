@@ -101,6 +101,15 @@
       "category": "AI"
     },
     {
+      "name": "technical-writing",
+      "version": "0.1.0",
+      "source": { "source": "local", "path": "./plugins/technical-writing" },
+      "interface": { "displayName": "Technical Writing" },
+      "description": "Draft, review, and revise source-grounded technical documentation with STE-inspired clarity and meaning-preservation checks.",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    },
+    {
       "name": "ti-2026-fantasy-advisor",
       "version": "0.1.0",
       "source": { "source": "local", "path": "./plugins/ti-2026-fantasy-advisor" },

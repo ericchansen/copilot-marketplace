@@ -1,0 +1,6 @@
+{
+  "name": "technical-writing",
+  "version": "0.1.0",
+  "description": "Draft, review, and revise source-grounded technical documentation with STE-inspired clarity and meaning-preservation checks.",
+  "skills": "./skills/"
+}
