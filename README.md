@@ -66,7 +66,7 @@ field.
 - `azure-doctor` — Diagnose and fix Azure deployments across repos, CI/CD pipelines, subscriptions, and service health.
 - `clean` — Perform post-merge git cleanup by returning to main/master, pulling latest, deleting merged branches, pruning remotes, and verifying a clean state.
 - `doc-generator` — Generate professional PDF and Word (DOCX) documents from markdown source files.
-- `edge-browser` — Launch Microsoft Edge with a specific user profile and remote debugging enabled for CDP control.
+- `edge-browser` — Control Microsoft Edge over CDP, on a dedicated debug profile or on the real signed-in profile via Edge's in-browser remote-debugging opt-in.
 - `foundry-image-gen` — Generate and edit images with GPT-Image-2, FLUX.2-flex, and MAI-Image-2.5-Pro in Microsoft Foundry.
 - `git-code-review` — Run a structured closeout review over local, branch, commit, or PR diffs before shipping.
 - `git-commit` — Curate conventional commits and autosquashed, rebase-ready history before pushes and PR updates.
