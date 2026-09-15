@@ -21,7 +21,7 @@ allowed-tools: Bash, PowerShell
 ## Prerequisites
 
 1. Edge or Chrome running with `--remote-debugging-port=9222`. If you have an Edge/browser helper skill installed, you can use it to launch the browser.
-   - **Edge/Chrome 136+ caveat:** CDP is **blocked on the default profile** (the debug port is silently ignored as an anti–cookie-theft mitigation). Bind it with a distinct, non-default `--user-data-dir` without closing the user's Edge, then verify the target app can sign in through PRT/WAM. Use **F12 → Network → Preserve log → Copy as cURL / Save all as HAR with content** only if the target app re-challenges or blocks that profile. (See the `edge-browser` skill's "Authenticated / SSO capture" section for detail.) Refs: <https://developer.chrome.com/blog/remote-debugging-port>, <https://crbug.com/1414669>
+   - **Edge/Chrome 136+ caveat:** CDP is **blocked on the default profile** (the debug port is silently ignored as an anti–cookie-theft mitigation). Bind it with a distinct, non-default `--user-data-dir` without closing the user's Edge, then verify the target app can sign in through PRT/WAM. Use **F12 → Network → Preserve log → Copy as cURL / Save all as HAR with content** only if the target app re-challenges or blocks that profile. (See the `edge-browser` skill for its two CDP paths and SSO capture fallbacks.) Refs: <https://developer.chrome.com/blog/remote-debugging-port>, <https://crbug.com/1414669>
 2. Node.js 22.4+ (stable native `WebSocket`; no `ws` package or install needed)
 3. User must be authenticated in the browser to the target app
 

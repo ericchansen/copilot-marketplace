@@ -1,6 +1,6 @@
 {
   "name": "edge-browser",
-  "version": "0.1.1",
-  "description": "Launch Microsoft Edge with a specific user profile and remote debugging enabled for CDP control.",
+  "version": "0.2.0",
+  "description": "Control Microsoft Edge over Chrome DevTools Protocol, either on a dedicated debug profile or on the real signed-in profile via Edge's in-browser remote-debugging opt-in.",
   "skills": "./skills/"
 }
