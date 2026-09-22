@@ -7,6 +7,8 @@ import test from "node:test";
 import { validateImageInputs } from "../lib/input-validation.mjs";
 import {
     MODEL_IDS,
+    MODELS,
+    IMAGE_PARAMETERS,
     buildProviderRequest,
     executeProviderRequest,
     extractImage,
@@ -44,6 +46,10 @@ test("defaults to GPT-Image-2 and preserves legacy environment names", () => {
             gptDeployment: "legacy-deployment",
             fluxDeployment: MODEL_IDS.FLUX,
             maiDeployment: MODEL_IDS.MAI,
+            sunburstDeployment: MODEL_IDS.SUNBURST,
+            flareDeployment: MODEL_IDS.FLARE,
+            mai26Deployment: MODEL_IDS.MAI26,
+            defaultModel: MODEL_IDS.GPT,
             openaiApiVersion: "preview",
             fluxApiVersion: "preview",
             subscription: "",
@@ -71,13 +77,13 @@ test("builds GPT generation and edit requests", () => {
     });
 
     const edit = buildProviderRequest(
-        { prompt: "edit", reference_images: ["layout.png"], input_fidelity: "low" },
+        { prompt: "edit", reference_images: ["layout.png"], input_fidelity: "high" },
         [png],
         "token",
         config
     );
     assert.match(edit.url, /\/openai\/v1\/images\/edits/);
-    assert.equal(edit.init.body.get("input_fidelity"), "low");
+    assert.equal(edit.init.body.has("input_fidelity"), false);
     assert.equal(edit.init.body.getAll("image[]").length, 1);
     assert.deepEqual(edit.effectiveSettings, {
         operation: "edit",
@@ -85,7 +91,7 @@ test("builds GPT generation and edit requests", () => {
         outputFormat: "png",
         referenceCount: 1,
         quality: "high",
-        inputFidelity: "low",
+        inputFidelity: "high (implicit)",
     });
 });
 
@@ -164,7 +170,7 @@ test("reports provider defaults and effective controls reproducibly", () => {
         outputFormat: "png",
         referenceCount: 1,
         quality: "high",
-        inputFidelity: "high",
+        inputFidelity: "high (implicit)",
     });
     assert.deepEqual(getEffectiveSettings({ model: MODEL_IDS.FLUX, prompt: "x" }, []), {
         operation: "generate",
@@ -199,8 +205,8 @@ test("enforces provider reference limits", () => {
         validateImageRequest({ model: MODEL_IDS.FLUX, prompt: "x" }, Array(10).fill(png), config)
     );
     assert.throws(
-        () => validateImageRequest({ model: MODEL_IDS.MAI, prompt: "x" }, [png, jpg], config),
-        /at most 1/
+        () => validateImageRequest({ model: MODEL_IDS.MAI, prompt: "x" }, Array(6).fill(png), config),
+        /at most 5/
     );
 });
 
@@ -208,7 +214,8 @@ test("rejects over-limit provider references before reading files", () => {
     const cases = [
         [MODEL_IDS.GPT, 17, /gpt-image-2 supports at most 16 reference images/],
         [MODEL_IDS.FLUX, 11, /FLUX\.2-flex supports at most 10 reference images/],
-        [MODEL_IDS.MAI, 2, /MAI-Image-2\.5-Pro supports at most 1 reference image/],
+        [MODEL_IDS.MAI, 6, /MAI-Image-2\.5-Pro supports at most 5 reference images/],
+        [MODEL_IDS.MAI26, 6, /MAI-Image-2\.6 supports at most 5 reference images/],
     ];
 
     for (const [model, count, expected] of cases) {
@@ -289,7 +296,7 @@ test("validates provider dimensions and unsupported combinations", () => {
     );
     assert.throws(
         () => validateImageRequest({ model: MODEL_IDS.FLUX, prompt: "x", size: "4096x2048" }, [], config),
-        /4 megapixels/
+        /4194304 pixels/
     );
     assert.throws(
         () => validateImageRequest({ model: MODEL_IDS.FLUX, prompt: "x", guidance: 10.1 }, [], config),
@@ -326,6 +333,77 @@ test("extracts supported response shapes", () => {
         url: "https://example.test/flux.png",
     });
     assert.equal(extractImage({ data: [] }), null);
+});
+
+test("schema and config use exactly the supported adapters, never catalog expansion", () => {
+    assert.deepEqual(IMAGE_PARAMETERS.properties.model.enum, Object.keys(MODELS));
+    assert.deepEqual(IMAGE_PARAMETERS.properties.quality.enum, ["low", "medium", "high", "xhigh", "max", "auto"]);
+    assert.throws(() => normalizeModel("gpt-image-future"), /Unsupported model/);
+    assert.throws(() => normalizeModel(""), /Unsupported model/);
+    const selected = getConfig({
+        FOUNDRY_IMAGE_MODEL: MODEL_IDS.SUNBURST,
+        FOUNDRY_IMAGE_ENDPOINT: "https://openai.example.test",
+        FOUNDRY_IMAGE_DEPLOYMENT: "legacy",
+        FOUNDRY_IMAGE_SUNBURST_DEPLOYMENT: "selected-sunburst",
+    });
+    assert.equal(buildProviderRequest({ prompt: "x" }, [], "token", selected).model, MODEL_IDS.SUNBURST);
+    assert.equal(JSON.parse(buildProviderRequest({ prompt: "x" }, [], "token", selected).init.body).model, "selected-sunburst");
+    assert.equal(JSON.parse(buildProviderRequest({ prompt: "x", model: MODEL_IDS.GPT }, [], "token", selected).init.body).model, "legacy");
+    assert.equal(buildProviderRequest({ prompt: "x", model: MODEL_IDS.FLARE }, [], "token", selected).deployment, MODEL_IDS.FLARE);
+});
+
+test("GPT-Image-2.5 supports documented qualities without injecting edit fidelity", () => {
+    for (const model of [MODEL_IDS.SUNBURST, MODEL_IDS.FLARE]) {
+        for (const quality of ["low", "medium", "high", "xhigh", "max", "auto"]) {
+            const generation = buildProviderRequest({ model, prompt: "x", quality, size: "1536x1152" }, [], "token", config);
+            assert.equal(JSON.parse(generation.init.body).quality, quality);
+            assert.equal(generation.family, "openai");
+        }
+        const edit = buildProviderRequest({ model, prompt: "x", size: "2048x1536" }, [png, jpg], "token", config);
+        assert.equal(edit.init.body.has("input_fidelity"), false);
+        assert.equal(edit.init.body.getAll("image[]").length, 2);
+        assert.equal(edit.init.body.get("quality"), "high");
+        assert.throws(() => buildProviderRequest({ model, prompt: "x", input_fidelity: "high" }, [png], "token", config), /does not support input_fidelity/);
+    }
+    assert.throws(() => validateImageRequest({ prompt: "x", quality: "xhigh" }, [], config), /does not support quality/);
+    assert.throws(() => validateImageRequest({ prompt: "x", input_fidelity: "low" }, [png], config), /Always high/);
+    assert.throws(() => validateImageRequest({ prompt: "x", quality: "typo" }, [], config), /does not support quality/);
+});
+
+test("MAI-Image-2.6 uses generation controls and repeated ordered edit images", () => {
+    const cfg = { ...config, mai26Deployment: "mai-latest" };
+    const request = buildProviderRequest({ model: MODEL_IDS.MAI26, prompt: "x", size: "1536x1152" }, [], "token", cfg);
+    assert.deepEqual(JSON.parse(request.init.body), {
+        model: "mai-latest", prompt: "x", width: 1536, height: 1152, auto_aspect_ratio: false, web_grounding: false,
+    });
+    for (const model of [MODEL_IDS.MAI, MODEL_IDS.MAI26]) {
+        const refs = [png, jpg, png, jpg, png];
+        const edit = buildProviderRequest({ model, prompt: "x" }, refs, "token", cfg);
+        assert.deepEqual(edit.init.body.getAll("image").map((image) => image.type), refs.map((image) => image.type));
+        assert.equal(edit.init.body.has("width"), false);
+        assert.equal(edit.effectiveSettings.size, "provider-determined");
+        assert.throws(() => validateImageRequest({ model, prompt: "x", quality: "high" }, [], cfg), /does not support quality/);
+        assert.throws(() => validateImageRequest({ model, prompt: "x", size: "1024x1024" }, refs, cfg), /edits do not support/);
+    }
+    assert.doesNotThrow(() => validateImageRequest({ model: MODEL_IDS.MAI26, prompt: "x", size: "1536x1536" }, [], cfg));
+    assert.doesNotThrow(() => validateImageRequest({ model: MODEL_IDS.MAI26, prompt: "x", size: "3072x768" }, [], cfg));
+    assert.throws(() => validateImageRequest({ model: MODEL_IDS.MAI26, prompt: "x", size: "1537x1536" }, [], cfg), /2359296/);
+    assert.throws(() => validateImageRequest({ model: MODEL_IDS.MAI, prompt: "x", size: "1536x1152" }, [], cfg), /1048576/);
+    assert.throws(() => validateImageRequest({ model: MODEL_IDS.MAI, prompt: "x", web_grounding: false }, [], cfg), /MAI-Image-2.6/);
+    assert.throws(() => validateImageRequest({ model: MODEL_IDS.MAI26, prompt: "x", auto_aspect_ratio: "false" }, [], cfg), /boolean/);
+    const automatic = buildProviderRequest({ model: MODEL_IDS.MAI26, prompt: "x", auto_aspect_ratio: true }, [], "token", cfg);
+    assert.equal(automatic.effectiveSettings.size, "provider-determined");
+    assert.deepEqual(automatic.requestedSettings, { auto_aspect_ratio: true });
+});
+
+test("invalid controls and dimensions fail before inference", () => {
+    for (const size of ["0x0", "NaNx1024", "1024x0", "", 1024, "9007199254740993x1024"]) {
+        assert.throws(() => validateImageRequest({ prompt: "x", size }, [], config), /Invalid size/);
+    }
+    assert.throws(() => validateImageRequest({ prompt: "x", unexpected: true }, [], config), /Unsupported image parameter/);
+    assert.throws(() => validateImageRequest({ prompt: "x", reference_roles: ["style"] }, [], config), /one non-empty role/);
+    assert.throws(() => validateImageRequest({ prompt: "x" }, [], { ...config, openaiEndpoint: "http://remote.example.test" }), /HTTPS/);
+    assert.throws(() => validateImageRequest({ prompt: "x" }, [], { ...config, openaiEndpoint: "https://example.test?key=placeholder" }), /without credentials/);
 });
 
 test("surfaces provider errors verbatim", async () => {

@@ -12,7 +12,7 @@ export function validateImageInputs(
     config = getConfig(),
     referenceValidator = validateReferenceImages
 ) {
-    const model = normalizeModel(args.model);
+    const model = normalizeModel(args.model, config.defaultModel);
     const referencePaths = args.reference_images;
 
     validateReferenceCount(model, Array.isArray(referencePaths) ? referencePaths : []);
