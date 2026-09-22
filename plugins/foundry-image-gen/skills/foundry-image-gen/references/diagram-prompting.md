@@ -32,11 +32,11 @@ Write the prompt in this order:
 13. **Invariants and exclusions:** preserve facts and accepted geometry before listing unwanted artifacts.
 14. **Acceptance criteria:** measurable checks for inventory, counts, spelling, topology, containment, legibility, contrast, safe areas, and cropping.
 
-Icons are redundant cues: they speed recognition after the adjacent text establishes meaning. Avoid unlabeled decorative symbols. Avoid generic dashboards and walls of equal cards when the content has hierarchy, flow, or containment.
+Semantic diagram icons are redundant cues: they speed recognition after adjacent text establishes meaning. Label unfamiliar symbols that carry a factual meaning, not every illustrative object. Avoid generic dashboards and walls of equal cards when the content has hierarchy, flow, or containment.
 
-## 3. Lock complex layouts before styling
+## 3. Lock layouts only when precision requires it
 
-For a complex or text-heavy figure, create a deterministic wireframe/content master with:
+For precise reproduction or topology-sensitive figures, create an approved deterministic wireframe/content master with:
 
 - every region and boundary;
 - all exact labels and final line wrapping;
@@ -50,7 +50,7 @@ Review this master for factual completeness and topology before image generation
 - **Image 2 - style reference:** controls only palette, texture, illustration treatment, or lighting.
 - **Image 3+ - subject/identity references:** control only the named element.
 
-The model should apply visual finish, not invent the information architecture.
+In this reproduction workflow, the model should apply visual finish, not invent the information architecture. For creative exploration or a poster, keep required copy and associations separate from visual design and let layout vary. A copy correction alone does not require locking the composition.
 
 ## 4. Iterate under quota
 
@@ -64,7 +64,7 @@ Generate variants sequentially. Keep content, labels, and topology invariant whi
 - icon labels and non-color cues;
 - safe areas, requested dimensions, and no cropping.
 
-When one criterion fails, edit the accepted candidate with one requested correction and an explicit preserve list. Broad regeneration can destroy already-correct text and topology.
+When one criterion fails in an otherwise accepted candidate, request a focused correction and an explicit preserve list. If the visual direction itself is not accepted, explore a new composition while preserving the required content. Keep raw comparison outputs intact; correction is separately scoped work.
 
 ## Weak and strong examples
 

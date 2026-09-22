@@ -181,3 +181,17 @@ jobs:
           node-version: 20
       - name: Test packaged TI fantasy analyzer
         run: node --test plugins/ti-2026-fantasy-advisor/skills/ti-2026-fantasy-advisor/tools/horizon-analyzer.test.js
+
+  test-foundry-images:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Test offline image tools and workflows
+        working-directory: plugins/foundry-image-gen/.github/extensions/foundry-image-gen
+        run: node --test && node extension.mjs --self-test

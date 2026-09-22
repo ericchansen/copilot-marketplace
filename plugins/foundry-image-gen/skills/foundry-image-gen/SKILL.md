@@ -1,87 +1,51 @@
 ---
 name: foundry-image-gen
-description: 'Generate or edit images with GPT-Image-2, FLUX.2-flex, or MAI-Image-2.5-Pro in Microsoft Foundry via the generate_image tool. Triggers: generate image, edit image, reference image, create image, draw, illustrate, diagram, infographic, figure, visual, mockup, logo, concept art.'
+description: 'Generate or edit images with GPT-Image-2, GPT-Image-2.5 Sunburst/Flare, FLUX.2-flex, or MAI-Image-2.5-Pro/2.6 in Microsoft Foundry. Use generate_image for a simple image; comparisons, resumable batches, review, and offline export are optional. Triggers: generate image, edit image, reference image, draw, illustrate, diagram, infographic, poster, mockup, logo, concept art, compare image models.'
 license: MIT
-allowed-tools: generate_image, Bash, PowerShell
+allowed-tools: generate_image, foundry_image_status, image_workflow, Bash, PowerShell
 ---
 
 # Foundry Image Generation
 
-Use `generate_image` for text-to-image generation and reference-guided edits with one of three explicit Microsoft Foundry adapters. GPT-Image-2 remains the default.
+**Start simple:** call `generate_image` with a prompt and one chosen model. An explicit `model` wins over `FOUNDRY_IMAGE_MODEL`; otherwise the default remains `gpt-image-2`. One call requests one image. Do not discover deployments, run smoke tests, write a recipe, or create a gallery for an ordinary configured image request.
 
-## Before Every Generation
+Supporting a model is not permission to use it. Use exactly the models and variants requested. A single model can produce one image or several content/design combinations; a comparison is never mandatory.
 
-Show the user the exact prompt, each reference image's role, and the variant count before calling the tool. Skip this checkpoint only when the user explicitly delegates iteration.
+## Generate or edit
 
-- Keep variants within the deployment's quota and generate them sequentially.
-- Name variants separately. Change one intentional variable between variants.
-- Open or render every result. An API success or saved file is not acceptance.
-- Never silently switch models, remove references, shorten the prompt, alter dimensions, or retry with materially different inputs.
+Show the exact prompt, selected model, reference roles, and image count before generation unless the user delegated iteration. Stay within the approved scope.
 
-## Choose a Workflow
+- **Creative exploration:** separate required content from visual design. Keep exact copy and factual associations while exploring composition, palette, materials, or metaphor. Posters do not need a layout master or a label on every illustrative object.
+- **Focused refinement:** identify what may change and what must remain. Fixing copy does not automatically lock layout. Preserve layout only when requested or already accepted.
+- **Precise reproduction:** use an approved layout/copy reference when geometry, topology, or identity must match. For factual diagrams, read [diagram prompting](references/diagram-prompting.md) and use the [brief template](references/diagram-brief-template.md) when helpful.
 
-### Simple image or edit
+Put concise integrated copy in quotes. Assign reference roles explicitly, in input order; `reference_roles` can record those roles alongside `reference_images`. Keep references inside the workspace: do not relax traversal or symlink checks. Stage an external file only with explicit authorization.
 
-Use a direct prompt when the composition is simple and exact topology is not part of the claim. State the subject, action, setting, composition, style, constraints, and reference roles.
+The optional image controls are `model`, `size`, `quality`, `reference_images`, `reference_roles`, `input_fidelity`, `guidance`, `steps`, `auto_aspect_ratio`, `web_grounding`, and `filename`. Unsupported combinations fail before inference. See [model capabilities and setup](references/models-and-setup.md) for exact controls, limits, deployment mappings, and documented compatibility changes.
 
-### Diagram, infographic, or educational figure
+## Inspect, then accept
 
-Read [references/diagram-prompting.md](references/diagram-prompting.md) and use [references/diagram-brief-template.md](references/diagram-brief-template.md).
+Open or render the actual output. A saved PNG is **generated**, not publication-approved. Check missing/extra claims, exact copy, metric-label associations, reference adherence, unwanted changes, legibility, and cropping. Use available OCR/copy comparison when helpful, but do not require an OCR service, another model call, or a subagent for a casual image.
 
-1. Build a source-backed factual inventory before visual prompting. Separate first-class facts, client-specific facts, optional supporting files, and external lifecycle/runtime concerns.
-2. State one learning objective and define the overall silhouette, canvas and safe areas, region map, reading order, hierarchy, connector topology, shape/icon semantics, exact text, color semantics, exclusions, and measurable acceptance criteria.
-3. Treat containment as a factual claim: draw an element inside a boundary only when it actually belongs there.
-4. Give unfamiliar icons persistent visible labels. Icons reinforce text; they do not replace it.
-5. For complex or layout-sensitive figures, create a deterministic labeled wireframe/content master first. It must lock regions, labels, wrapping, connectors, attachment points, and boundaries.
-6. Edit from that master and name every reference's role, such as layout/copy master, style reference, identity reference, or accepted prior result.
-7. Reject generic dashboard or equal-card-grid compositions unless the content is genuinely a dashboard or a set of peers.
-8. Inspect every candidate for required counts, exact spelling, topology, boundary truth, connector crossings, safe-area compliance, and cropping.
-9. Correct a failed candidate with a surgical, one-variable reference-guided edit and a preserve list. Do not broadly regenerate an otherwise accepted figure.
+Use `unreviewed`, `approved`, `revise`, or `rejected`; optional `image_workflow` review notes record copy and visual findings without changing the PNG. A deterministic text overlay is a separately requested fidelity fallback, not the default pipeline. Preserve raw comparison outputs; artistic correction is new work.
 
-## Model Selection
+## Optional workflows and recovery
 
-| `model` | API and strengths | References | Dimensions and model-only controls |
-|---------|-------------------|------------|------------------------------------|
-| `gpt-image-2` (default) | OpenAI images generation/edit APIs; supports `quality` and edit `input_fidelity` | 0-16 PNG/JPEG | `auto` or arbitrary sizes with 16-pixel edges, <=3,840 long edge, <=3:1 ratio, and 655,360-8,294,400 pixels |
-| `FLUX.2-flex` | Black Forest Labs provider API; text/layout work with explicit `guidance` and `steps` | 0-10 PNG/JPEG, sent in order | `WIDTHxHEIGHT` or `auto`; each edge >=64, <=4 MP; `guidance` 1.5-10, `steps` 1-50 |
-| `MAI-Image-2.5-Pro` | MAI generation/edit APIs; generation returns PNG and edits use multipart image upload | 0-1 PNG/JPEG | Generation only: each edge >=768 and <=1,048,576 total pixels. Edit dimensions are provider-determined. |
+Only for requested batches, comparisons, resumption, or delivery, read [optional workflows](references/workflows.md). The agent writes the recipe; the user should not have to author JSON. Recipes contain explicit jobs and build each prompt from only its selected content pack and design. Matched prompts share content, references, and supported settings; disclose provider-specific differences.
 
-There is no universal winner. Same-prompt comparisons can expose useful differences, but report the model, dimensions, references, and provider-only controls with each result. A comparison is not controlled when unsupported parameters are silently normalized.
+Images and provenance are saved immediately in unique run directories. Resume skips verified outputs and recovers saved receipts. Transient HTTP retries are bounded, respect `Retry-After`, and preserve inputs. Ambiguous transport failures are not automatically resubmitted. Never switch models, remove references, change resolution, or rewrite a prompt under the label "retry"; those are replanning. Do not bypass or repeatedly retry safety blocks.
 
-## Configuration
+If setup is needed, use the read-only `foundry_image_status` tool for the explicitly selected account, resource group, and optional subscription. It distinguishes catalog availability, deployment state, adapter support, and untested inference. It does not sign in, switch accounts, install anything, create resources, change permissions, or set persistent environment variables.
 
-Authenticate Azure CLI with `az login` and grant the appropriate inference role on the target resource. Configure generic account endpoints and deployment names; the plugin contains no resource-specific defaults.
+For requested delivery, `image_workflow` can export static HTML and a ZIP with relative image assets and opening instructions. It works for one model or several and needs no server. A local preview is not a shareable web URL; uploading, posting, hosting, and access changes require a separate request.
 
-| Environment variable | Used by | Default |
-|----------------------|---------|---------|
-| `FOUNDRY_IMAGE_ENDPOINT` | GPT OpenAI-compatible account endpoint | Required for GPT |
-| `FOUNDRY_IMAGE_SERVICES_ENDPOINT` | FLUX BFL provider and MAI API base endpoint | Required for FLUX/MAI |
-| `FOUNDRY_IMAGE_DEPLOYMENT` | GPT deployment name | `gpt-image-2` |
-| `FOUNDRY_IMAGE_FLUX_DEPLOYMENT` | FLUX deployment name | `FLUX.2-flex` |
-| `FOUNDRY_IMAGE_MAI_DEPLOYMENT` | MAI deployment name | `MAI-Image-2.5-Pro` |
-| `FOUNDRY_IMAGE_API_VERSION` | GPT images API version | `preview` |
-| `FOUNDRY_IMAGE_FLUX_API_VERSION` | BFL provider API version | `preview` |
-| `FOUNDRY_IMAGE_SUBSCRIPTION` | Optional subscription GUID used to acquire the Entra token | Empty |
+## Offline checks
 
-`FOUNDRY_IMAGE_ENDPOINT` remains the GPT endpoint setting for backward compatibility. The selected model determines the provider; missing configuration and unsupported parameter combinations fail before any provider request.
-
-## Tool Parameters
-
-`prompt` is required. Optional parameters are `model`, `size`, `quality`, `reference_images`, `input_fidelity`, `guidance`, `steps`, and `filename`. References must be local PNG/JPEG files under 50 MB. Relative paths must remain inside the session workspace.
-
-Images are saved as PNG to the session `files/` directory, or to `$TEMP/foundry-images` without a session workspace. Provider error bodies are returned unchanged.
-
-## Recovery and QA
-
-- Missing or misplaced content: strengthen the locked inventory or edit only the failed region.
-- Bad text: use exact quoted copy and a labeled layout/copy master.
-- Over-copied references: for GPT edits, lower `input_fidelity`; otherwise restate each reference's role and preserve list.
-- Moderation block: simplify neutral wording; never bypass safety controls.
-- Rate limit: wait for the quota window and continue sequentially without changing the request.
-
-Run the offline checks:
+From `plugins/foundry-image-gen/.github/extensions/foundry-image-gen`:
 
 ```shell
-node --test plugins/foundry-image-gen/.github/extensions/foundry-image-gen/tests/providers.test.mjs
-node plugins/foundry-image-gen/.github/extensions/foundry-image-gen/extension.mjs --self-test
+node --test
+node extension.mjs --self-test
 ```
+
+Provider evidence and API samples: [Microsoft GPT images](https://learn.microsoft.com/azure/foundry/openai/how-to/dall-e), [Microsoft MAI images](https://learn.microsoft.com/azure/foundry/foundry-models/how-to/use-foundry-models-mai-image), [Microsoft FLUX](https://learn.microsoft.com/azure/foundry/foundry-models/how-to/use-foundry-models-flux), and [OpenAI image prompting](https://developers.openai.com/api/docs/guides/image-prompting).

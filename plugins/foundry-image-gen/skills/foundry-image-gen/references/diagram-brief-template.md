@@ -1,6 +1,6 @@
 # Diagram Brief and Prompt Template
 
-Complete every required field before generation. Remove instructional notes from the final prompt, but retain the section headings.
+Use this template for precise or topology-sensitive diagrams, not as a prerequisite for posters or creative exploration. Complete the applicable fields. Remove instructional notes from the final prompt, but retain useful section headings.
 
 ```text
 DELIVERABLE
@@ -50,7 +50,7 @@ No [crossings/double-headed arrows/unlabeled lines].
 EXACT LABELS AND TYPOGRAPHY
 - "[exact text]" - [location, level, alignment, max lines].
 Render every quoted phrase verbatim, exactly once.
-Use [type hierarchy]. Unfamiliar icons always have adjacent visible labels.
+Use [type hierarchy]. Label unfamiliar icons that carry factual meaning; illustrative objects need no automatic labels.
 
 ICON AND SHAPE SYSTEM
 - [shape/icon] means [one semantic meaning].

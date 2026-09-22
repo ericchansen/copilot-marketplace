@@ -1,6 +1,6 @@
 {
   "name": "foundry-image-gen",
-  "version": "0.2.0",
-  "description": "Generate and edit images with GPT-Image-2, FLUX.2-flex, and MAI-Image-2.5-Pro in Microsoft Foundry.",
+  "version": "0.3.0",
+  "description": "Generate and edit images with GPT, FLUX, and MAI in Microsoft Foundry, with optional resumable comparisons and offline delivery.",
   "skills": "./skills/"
 }
