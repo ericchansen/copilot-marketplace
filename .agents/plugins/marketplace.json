@@ -26,6 +26,15 @@
       "category": "Development"
     },
     {
+      "name": "de-slop",
+      "version": "0.1.0",
+      "source": { "source": "local", "path": "./plugins/de-slop" },
+      "interface": { "displayName": "De-slop" },
+      "description": "Find maintenance cost that lacks a current durable requirement or observable user benefit.",
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Development"
+    },
+    {
       "name": "doc-generator",
       "source": { "source": "local", "path": "./plugins/doc-generator" },
       "interface": { "displayName": "Doc Generator" },

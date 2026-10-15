@@ -1,0 +1,6 @@
+{
+  "name": "de-slop",
+  "version": "0.1.0",
+  "description": "Find maintenance cost that lacks a current durable requirement or observable user benefit.",
+  "skills": "./skills/"
+}
