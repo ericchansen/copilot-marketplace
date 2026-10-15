@@ -63,6 +63,46 @@ users copy skill folders into a scanned skills dir (see README).
 The `Validate` workflow enforces that all marketplace manifests list the
 same plugins and that the Codex manifests match each `plugin.json`.
 
+## Local Installation and Troubleshooting
+
+Use marketplace-installed plugins as the normal deployment path. Keep these
+locations distinct (Windows paths shown relative to the user's home):
+
+| Location | Role |
+| --- | --- |
+| This worktree's `plugins\<name>\` | Tracked source; make fixes here |
+| `~\.copilot\installed-plugins\<marketplace>\<name>\` | Copilot-managed installed copy; use `copilot plugin` commands to manage it |
+| `~\.copilot\extensions\<name>\extension.mjs` | Independently loaded standalone user extension; not the marketplace-installed copy |
+| A repository's `.github\extensions\<name>\extension.mjs` | Independently discovered project extension; not automatically a plugin installation |
+
+A plugin can bundle extensions beneath its own root, as declared by its manifest.
+Do not copy or symlink those components into user-level or project-level discovery
+directories to install, test, or update the plugin. Do not patch managed installed
+copies directly. Make source changes in the worktree, then use the plugin manager
+for installation/update; temporary development loading must not leave a second
+active copy or persistent config changes.
+
+Before diagnosing a plugin failure:
+
+1. Inspect `copilot plugin list --json`, the installed manifest, and startup logs
+   to establish the enabled version and actual loaded entrypoint paths.
+2. Check standalone user extensions and project extensions for overlapping
+   registrations. Tool names must be unique across loaded extensions; separate
+   copies are not deduplicated merely because their code or directory names match.
+3. For a duplicate registration, identify which copy belongs to the intended
+   marketplace installation. Remove or disable an obsolete standalone copy only
+   with user authorization; preserve unrelated extensions. Do not rename a public
+   tool or add an alias to accommodate an accidental duplicate installation.
+4. When migrating a prototype into a plugin, explicitly account for retiring its
+   old discovery entrypoints and any prototype-only config. Record what remains.
+5. Verify startup after reload or in a fresh session, with only the intended copy
+   loaded. Offline unit tests do not establish that extension registration works.
+   Report any runtime verification still pending; do not use paid inference merely
+   to test startup.
+
+References: [Copilot CLI plugins](https://docs.github.com/copilot/concepts/agents/copilot-cli/about-cli-plugins)
+and [extension discovery and tool constraints](https://github.com/github/copilot-sdk/blob/main/nodejs/docs/agent-author.md).
+
 ## Skill YAML Frontmatter
 
 Every `SKILL.md` must have:
