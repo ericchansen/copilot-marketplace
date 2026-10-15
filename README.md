@@ -65,6 +65,7 @@ field.
 - `api-reverse-engineer` — Capture browser network requests through Chrome DevTools Protocol when a web UI is the only reliable API reference.
 - `azure-doctor` — Diagnose and fix Azure deployments across repos, CI/CD pipelines, subscriptions, and service health.
 - `clean` — Perform post-merge git cleanup by returning to main/master, pulling latest, deleting merged branches, pruning remotes, and verifying a clean state.
+- `de-slop` — Review code, tests, documentation, configuration, generated artifacts, and UI for removable maintenance cost that lacks a current durable requirement or observable user benefit.
 - `doc-generator` — Generate professional PDF and Word (DOCX) documents from markdown source files.
 - `edge-browser` — Control Microsoft Edge over CDP, on a dedicated debug profile or on the real signed-in profile via Edge's in-browser remote-debugging opt-in.
 - `foundry-image-gen` — Generate and edit images with GPT-Image-2/2.5, FLUX.2-flex, and MAI-Image-2.5-Pro/2.6 in Microsoft Foundry; optionally resume batches, compare selected models, and export offline galleries.

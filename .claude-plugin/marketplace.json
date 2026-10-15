@@ -28,6 +28,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "de-slop",
+      "source": "plugins/de-slop",
+      "description": "Find maintenance cost that lacks a current durable requirement or observable user benefit.",
+      "version": "0.1.0"
+    },
+    {
       "name": "doc-generator",
       "source": "plugins/doc-generator",
       "description": "Generate professional PDF and Word (DOCX) documents from markdown source files.",
