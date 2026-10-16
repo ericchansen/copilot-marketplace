@@ -5,10 +5,12 @@ description: >-
   generated artifacts, and UI that cost more to maintain than they currently
   earn. Use for de-slop reviews, redundant or low-value tests, SDK tests, copy
   tests, dead code, unnecessary abstractions, speculative compatibility, stale
-  UI, duplicate sources of truth, or requests to identify what should be
-  removed. Every test must catch a plausible regression in behavior owned by
-  this codebase; if no realistic bug is uniquely caught, delete or do not add
-  the test. Review only by default; modify the target only when explicitly asked.
+  UI, visual clutter such as excessive horizontal dividers or boxed callouts
+  with colored left borders, duplicate sources of truth, or requests to identify
+  what should be removed. Every test must catch a plausible regression in
+  behavior owned by this codebase; if no realistic bug is uniquely caught,
+  delete or do not add the test. Review only by default; modify the target only
+  when explicitly asked.
 license: MIT
 allowed-tools: Bash, PowerShell
 ---
@@ -88,6 +90,12 @@ Find evidence for deletion:
   or stale static values exposed as if users need them;
 - UI elements and instructions that consume attention without helping a user
   understand state or take action.
+
+For rendered UI, specifically flag repeated horizontal dividers and boxes with
+colored left borders when they are decorative rather than necessary for
+hierarchy, state, or action. Prefer spacing and typography over excessive rules
+and boxed sections. Preserve borders or color cues that communicate meaningful
+status, interaction, grouping, or accessibility information.
 
 Trace each candidate to current callers and behavior. Future-proofing,
 speculative compatibility, and "we might need it" are not requirements.
