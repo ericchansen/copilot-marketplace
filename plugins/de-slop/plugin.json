@@ -1,7 +1,7 @@
 {
   "name": "de-slop",
-  "description": "Find maintenance cost that lacks a current durable requirement or observable user benefit.",
-  "version": "0.1.0",
+  "description": "Find maintenance cost and visual clutter that lack a current durable requirement or observable user benefit.",
+  "version": "0.1.1",
   "author": {
     "name": "Eric Hansen",
     "url": "https://github.com/ericchansen"
