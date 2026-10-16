@@ -22,6 +22,8 @@ test("the original generate_image contract stays prompt-only with one preferred 
     });
     const tool = tools.find((item) => item.name === "generate_image");
     assert.deepEqual(tool.parameters.required, ["prompt"]);
+    assert.equal(tool.parameters.properties.transparent_background.type, "boolean");
+    assert.equal(tool.parameters.properties.background_color.pattern, "^#[0-9a-fA-F]{6}$");
     const result = await tool.handler({ prompt: "A garden" });
     assert.equal(calls, 1);
     assert.equal(typeof result, "string");

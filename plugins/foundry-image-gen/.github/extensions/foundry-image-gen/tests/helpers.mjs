@@ -17,6 +17,7 @@ export function png(width = 3, height = 2, color = [36, 91, 143]) {
         crc.writeUInt32BE(crc32(Buffer.concat([type, bytes])));
         return Buffer.concat([size, type, bytes, crc]);
     }
+
     const header = Buffer.alloc(13);
     header.writeUInt32BE(width);
     header.writeUInt32BE(height, 4);
@@ -30,6 +31,34 @@ export function png(width = 3, height = 2, color = [36, 91, 143]) {
                 rows[y * (width * 3 + 1) + x * 3 + channel + 1] = Math.min(255, color[channel] * stripe);
             }
         }
+    }
+    return Buffer.concat([
+        Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", header),
+        chunk("IDAT", deflateSync(rows)), chunk("IEND", Buffer.alloc(0)),
+    ]);
+}
+
+export function rgbPng(width, height, pixels) {
+    function chunk(name, bytes) {
+        const type = Buffer.from(name);
+        const size = Buffer.alloc(4);
+        size.writeUInt32BE(bytes.length);
+        const crc = Buffer.alloc(4);
+        crc.writeUInt32BE(crc32(Buffer.concat([type, bytes])));
+        return Buffer.concat([size, type, bytes, crc]);
+    }
+    if (pixels.length !== width * height || pixels.some((pixel) =>
+        !Array.isArray(pixel) || pixel.length !== 3 || pixel.some((value) => !Number.isInteger(value) || value < 0 || value > 255))) {
+        throw new Error("RGB fixture pixels must match dimensions");
+    }
+    const header = Buffer.alloc(13);
+    header.writeUInt32BE(width);
+    header.writeUInt32BE(height, 4);
+    header[8] = 8;
+    header[9] = 2;
+    const rows = Buffer.alloc(height * (width * 3 + 1));
+    for (let y = 0; y < height; y++) {
+        Buffer.from(pixels.slice(y * width, (y + 1) * width).flat()).copy(rows, y * (width * 3 + 1) + 1);
     }
     return Buffer.concat([
         Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", header),

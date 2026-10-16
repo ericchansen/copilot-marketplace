@@ -18,17 +18,19 @@ The agent writes a workspace-local JSON file after establishing the requested sc
     }
   },
   "designs": {
-    "paper": "Layered paper plants, deep green and warm yellow, one open composition.",
+    "paper": "Layered paper plants, deep green and warm yellow, one open composition. Use a perfectly flat, uniform exact #FFF7EE matte background reaching every image border, with no background gradient, texture, shadow, glow, or vignette.",
     "ink": "Expressive ink drawing, generous lettering, a different composition."
   },
   "jobs": [
-    {"id": "paper", "content": "garden", "design": "paper", "model": "gpt-image-2", "settings": {"size": "1536x1024"}},
+    {"id": "paper", "content": "garden", "design": "paper", "model": "gpt-image-2", "settings": {"size": "1536x1024", "transparent_background": true, "background_color": "#FFF7EE"}},
     {"id": "ink", "content": "garden", "design": "ink", "model": "gpt-image-2", "settings": {"size": "1536x1024"}}
   ]
 }
 ```
 
 Call `image_workflow` with `action: "run"` and `recipe: "<workspace-relative JSON path>"`. The [recipe helper](../../../.github/extensions/foundry-image-gen/lib/recipes.mjs) validates the complete run before authentication or inference. Unsupported fields fail rather than being silently ignored.
+
+Transparent output is opt-in per job. Its selected design should require a perfectly flat, exact matte matching `background_color` across every border pixel. The provider still generates a normal PNG; local postprocessing converts only border-connected matte pixels to transparency before final output hashing. Do not describe this as native provider transparency.
 
 For a comparison, add only the requested model jobs, selecting the same content/design. Do not add content from other packs, even inside "do not include" instructions. Keep supported shared settings and reference order matched. MAI has no quality switch and edit dimensions differ; use per-job settings and disclose these differences rather than inventing an equivalent quality level. Same quality labels are not equal measured output quality; see [OpenAI comparison guidance](https://developers.openai.com/api/docs/guides/image-prompting).
 
@@ -40,7 +42,7 @@ Both tools save collision-safe run directories under session `files/` (or the te
 
 - `journal.json`: exact selected prompts, canonical model/deployment/family, configured deployment-version snapshot and returned model version when known, prompt/reference/input hashes, requested/effective settings, actual PNG dimensions/hash, attempts/request IDs, inference elapsed time, available numeric usage, and review notes.
 - `job-<id>.received.json`: credential-free PNG receipt plus response metadata, saved before advancing to the next job. Receipts are retained for recovery and are not included in exports.
-- `job-<id>.png`: the raw result. Recovery uses a new filename if a different file occupies that path.
+- `job-<id>.png`: the final result. Without postprocessing it is byte-identical to the provider receipt. With transparent-background postprocessing it is a deterministic RGBA PNG; the immutable receipt retains the provider bytes. Recovery reapplies the recorded transform and uses a new filename if a different file occupies the original path.
 
 Treat local prompts, references, and journals as potentially sensitive; keep runs in the session workspace, not source control. No access token, authorization header, signed download URL, or configured endpoint is written to the journal. Endpoint identity is hashed for resume checks.
 

@@ -8,7 +8,8 @@ import { atomicJson, hash, pngDimensions, readJson } from "../lib/files.mjs";
 import { recipeJobs } from "../lib/recipes.mjs";
 import { MODEL_IDS } from "../lib/providers.mjs";
 import { loadRun, resumeRun, reviewRun, startRun } from "../lib/workflow.mjs";
-import { config, imageResponse, offlineOptions, png } from "./helpers.mjs";
+import { decodePng } from "../lib/postprocess.mjs";
+import { config, imageResponse, offlineOptions, png, rgbPng } from "./helpers.mjs";
 
 function workspace(t) {
     const root = mkdtempSync(join(tmpdir(), "foundry-run-test-"));
@@ -57,6 +58,7 @@ test("prompt-only generation makes one inference request and never overwrites", 
     const first = await startRun([job("image")], root, config, options);
     assert.equal(calls, 1);
     const original = readFileSync(first.jobs[0].image);
+    assert.deepEqual(original, png(), "default generation preserves provider PNG bytes");
     const second = await startRun([job("image")], root, config, options);
     assert.equal(calls, 2);
     assert.notEqual(first.run, second.run);
@@ -70,12 +72,94 @@ test("prompt-only generation makes one inference request and never overwrites", 
     assert.equal(saved.promptHash, hash("A public garden"));
     assert.equal(saved.attempts[0].requestId, "fixture-request");
     assert.deepEqual(saved.requestedSettings, {});
+    assert.equal(saved.effectiveSettings.transparentBackground, undefined);
+    assert.equal(saved.output.postprocessing, undefined);
     assert.equal(saved.effectiveSettings.quality, "high");
     assert.equal(saved.usage.total_tokens, 42);
     for (const file of readdirSync(first.run)) {
         assert.ok(!readFileSync(join(first.run, file)).includes(Buffer.from("fixture-auth-token")));
         assert.ok(!readFileSync(join(first.run, file)).includes(Buffer.from("Authorization")));
     }
+});
+
+test("transparent background is explicit, validated before inference, and recipe-compatible", async (t) => {
+    const root = workspace(t);
+    for (const args of [
+        { transparent_background: true },
+        { transparent_background: true, background_color: "FFF7EE" },
+        { transparent_background: false, background_color: "#FFF7EE" },
+        { transparent_background: "yes", background_color: "#FFF7EE" },
+    ]) {
+        await assert.rejects(startRun([job("image", args)], root, config, {
+            tokenProvider: () => assert.fail("no auth"),
+            fetchImpl: () => assert.fail("no inference"),
+        }), /transparent_background|background_color/);
+    }
+    assert.deepEqual(readdirSync(root), []);
+    const recipe = {
+        version: 1,
+        content: { garden: { brief: "Garden icon" } },
+        designs: { matte: "A flat exact #FFF7EE background" },
+        jobs: [{
+            id: "alpha", content: "garden", design: "matte", model: MODEL_IDS.GPT,
+            settings: { transparent_background: true, background_color: "#fff7ee" },
+        }],
+    };
+    assert.deepEqual(recipeJobs(recipe)[0].args, {
+        transparent_background: true,
+        background_color: "#fff7ee",
+        prompt: "CONTENT\nGarden icon\n\nVISUAL DESIGN\nA flat exact #FFF7EE background",
+        model: MODEL_IDS.GPT,
+    });
+});
+
+test("transparent background removes only border-connected matte pixels and resumes deterministically", async (t) => {
+    const root = workspace(t);
+    const matte = [255, 247, 238];
+    const nearMatte = [240, 247, 238];
+    const art = [12, 34, 56];
+    const source = rgbPng(5, 5, [
+        nearMatte, matte, matte, matte, matte,
+        matte, art, art, art, matte,
+        matte, art, matte, art, matte,
+        matte, art, art, art, matte,
+        matte, matte, matte, matte, matte,
+    ]);
+    let calls = 0;
+    const result = await startRun([job("alpha", {
+        transparent_background: true, background_color: "#fff7ee",
+    })], root, config, offlineOptions({
+        fetchImpl: async () => { calls++; return imageResponse(source); },
+    }));
+    assert.equal(calls, 1);
+    const output = readFileSync(result.jobs[0].image);
+    assert.notDeepEqual(output, source);
+    const decoded = decodePng(output);
+    assert.equal(decoded.rgba[3], 0);
+    assert.equal(decoded.rgba[(2 * 5 + 2) * 4 + 3], 255, "enclosed matching color remains opaque");
+    assert.ok(Array.from({ length: 25 }, (_, pixel) => decoded.rgba[pixel * 4 + 3]).every((alpha) => alpha === 0 || alpha === 255));
+    const saved = loadRun(root, result.run).journal.jobs[0];
+    assert.deepEqual(saved.requestedSettings, { transparent_background: true, background_color: "#FFF7EE" });
+    assert.equal(saved.effectiveSettings.backgroundColor, "#FFF7EE");
+    assert.equal(saved.output.postprocessing.removedPixels, 16);
+    assert.equal(saved.output.postprocessing.sourceSha256, hash(source));
+    assert.equal(saved.output.sha256, hash(output));
+    const receipt = readJson(result.run, "job-alpha.received.json");
+    assert.deepEqual(Buffer.from(receipt.b64, "base64"), source, "receipt preserves provider bytes");
+    const resumed = await resumeRun(result.run, root, config, offlineOptions({
+        tokenProvider: () => assert.fail("verified output skips auth"),
+        fetchImpl: () => assert.fail("verified output skips inference"),
+    }));
+    assert.equal(resumed.jobs[0].postprocessing.removedPixels, 16);
+    assert.equal(hash(readFileSync(resumed.jobs[0].image)), saved.output.sha256);
+    writeFileSync(resumed.jobs[0].image, "corrupted transparent fixture");
+    const recovered = await resumeRun(result.run, root, config, offlineOptions({
+        tokenProvider: () => assert.fail("receipt recovery skips auth"),
+        fetchImpl: () => assert.fail("receipt recovery skips inference"),
+    }));
+    assert.notEqual(recovered.jobs[0].image, resumed.jobs[0].image);
+    assert.equal(hash(readFileSync(recovered.jobs[0].image)), saved.output.sha256);
+    assert.equal(decodePng(readFileSync(recovered.jobs[0].image)).rgba[3], 0);
 });
 
 test("validates every job before auth, output directories, or inference", async (t) => {

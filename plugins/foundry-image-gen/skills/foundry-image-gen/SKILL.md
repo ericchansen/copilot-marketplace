@@ -21,7 +21,9 @@ Show the exact prompt, selected model, reference roles, and image count before g
 
 Put concise integrated copy in quotes. Assign reference roles explicitly, in input order; `reference_roles` can record those roles alongside `reference_images`. Keep references inside the workspace: do not relax traversal or symlink checks. Stage an external file only with explicit authorization.
 
-The optional image controls are `model`, `size`, `quality`, `reference_images`, `reference_roles`, `input_fidelity`, `guidance`, `steps`, `auto_aspect_ratio`, `web_grounding`, and `filename`. Unsupported combinations fail before inference. See [model capabilities and setup](references/models-and-setup.md) for exact controls, limits, deployment mappings, and documented compatibility changes.
+The optional image controls are `model`, `size`, `quality`, `reference_images`, `reference_roles`, `input_fidelity`, `guidance`, `steps`, `auto_aspect_ratio`, `web_grounding`, `transparent_background`, `background_color`, and `filename`. Unsupported combinations fail before inference. See [model capabilities and setup](references/models-and-setup.md) for exact controls, limits, deployment mappings, and documented compatibility changes.
+
+For transparent delivery, explicitly set `transparent_background: true` and a six-digit `background_color` such as `#FFF7EE`. In the prompt, require that exact color as a perfectly flat, uniform matte reaching every image border, with no gradient, texture, shadow, or vignette in the background. This is deterministic local PNG postprocessing after the provider responds; do not claim the provider natively returned transparency. The tool removes only matte-colored pixels connected to the border, preserving enclosed uses of the same color in the artwork. It is never enabled by default.
 
 ## Inspect, then accept
 

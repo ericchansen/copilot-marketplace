@@ -121,6 +121,15 @@ export const IMAGE_PARAMETERS = {
         steps: { type: "integer", minimum: 1, maximum: 50, description: "FLUX.2-flex only" },
         auto_aspect_ratio: { type: "boolean", description: "MAI-Image-2.6 only; defaults to false" },
         web_grounding: { type: "boolean", description: "MAI-Image-2.6 only; defaults to false (no web search)" },
+        transparent_background: {
+            type: "boolean",
+            description: "Opt-in local postprocessing; requires background_color and does not request native provider transparency",
+        },
+        background_color: {
+            type: "string",
+            pattern: "^#[0-9a-fA-F]{6}$",
+            description: "Exact flat matte color to remove from border-connected pixels, for example #FFF7EE",
+        },
         filename: { type: "string", description: "Output name; a unique run directory prevents overwrites" },
     },
     required: ["prompt"],

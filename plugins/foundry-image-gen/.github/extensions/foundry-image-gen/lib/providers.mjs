@@ -1,4 +1,5 @@
 import { IMAGE_PARAMETERS, MODEL_IDS, MODELS, REFERENCE_LIMITS, normalizeModel } from "./models.mjs";
+import { BACKGROUND_TOLERANCE, normalizeBackgroundColor } from "./postprocess.mjs";
 
 export { IMAGE_PARAMETERS, MODEL_IDS, MODELS, REFERENCE_LIMITS, normalizeModel };
 export { executeProviderRequest } from "./transport.mjs";
@@ -116,6 +117,15 @@ export function validateImageRequest(args, references, config = getConfig()) {
             throw new Error(`${key} must be a boolean and is supported only by MAI-Image-2.6`);
         }
     }
+    if (args.transparent_background !== undefined && typeof args.transparent_background !== "boolean") {
+        throw new Error("transparent_background must be a boolean");
+    }
+    if (args.transparent_background) {
+        if (args.background_color === undefined) throw new Error("transparent_background requires background_color");
+        normalizeBackgroundColor(args.background_color);
+    } else if (args.background_color !== undefined) {
+        throw new Error("background_color requires transparent_background=true");
+    }
     if (cap.family === "mai" && references.length) {
         if (args.size !== undefined) throw new Error(`${model} edits do not support output dimensions`);
         return model;
@@ -159,6 +169,12 @@ export function getEffectiveSettings(args, references, model = normalizeModel(ar
         outputFormat: "png",
         referenceCount: references.length,
     };
+    if (args.transparent_background) {
+        settings.transparentBackground = true;
+        settings.backgroundColor = normalizeBackgroundColor(args.background_color);
+        settings.backgroundTolerance = BACKGROUND_TOLERANCE;
+        settings.backgroundRemoval = "border-connected-matte-to-alpha";
+    }
     if (cap.family === "openai") {
         settings.quality = args.quality ?? "high";
         if (editing && model === MODEL_IDS.GPT) settings.inputFidelity = "high (implicit)";
