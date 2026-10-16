@@ -47,7 +47,7 @@ export function imageTools(getSession, runtime = {}) {
     return [
         {
             name: "generate_image",
-            description: "Generate or edit one image with one selected Foundry model. No discovery, comparison, gallery, or paid smoke test is required.",
+            description: "Generate or edit one image with one selected Foundry model. Optional transparent_background locally removes a specified flat matte after generation; providers are not claimed to return transparency.",
             parameters: IMAGE_PARAMETERS,
             handler: guard(async (args) => {
                 const { workspace, options } = context();
@@ -60,6 +60,7 @@ export function imageTools(getSession, runtime = {}) {
                     `Requested settings: ${JSON.stringify(result.jobs[0].requestedSettings)}`,
                     `Effective settings: ${JSON.stringify(result.jobs[0].effectiveSettings)}`,
                     `Actual PNG dimensions: ${JSON.stringify(result.jobs[0].dimensions)}`,
+                    `Postprocessing: ${JSON.stringify(result.jobs[0].postprocessing)}`,
                     `Attempts: ${result.jobs[0].attempts}${result.jobs[0].possibleDuplicateBilling ? "; a provider failure may have incurred duplicate billing" : ""}`,
                     `Review: unreviewed. Inspect the output before acceptance.`,
                     `Run journal: ${join(result.run, "journal.json")}`,

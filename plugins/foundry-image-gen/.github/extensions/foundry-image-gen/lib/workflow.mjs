@@ -9,6 +9,7 @@ import {
 } from "./providers.mjs";
 import { downloadImage, withDeployment } from "./transport.mjs";
 import { atomicJson, containedPath, createOutputDir, hash, pngDimensions, readJson, withRunLock } from "./files.mjs";
+import { normalizeBackgroundColor, removeBorderConnectedBackground } from "./postprocess.mjs";
 
 export const REVIEW_STATES = ["unreviewed", "approved", "revise", "rejected"];
 const validId = (id) => typeof id === "string" && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(id);
@@ -22,7 +23,10 @@ function prepareJobs(jobs, workspace, config) {
         if (!validId(id) || ids.has(id.toLowerCase())) throw new Error("Image job IDs must be unique safe names");
         ids.add(id.toLowerCase());
         const { model, references } = validateImageInputs(args, workspace, config);
-        const normalized = { ...args, model };
+        const normalized = {
+            ...args, model,
+            ...(args.background_color ? { background_color: normalizeBackgroundColor(args.background_color) } : {}),
+        };
         if (args.reference_images) {
             normalized.reference_images = args.reference_images.map((path) => relative(workspace, containedPath(workspace, path)));
         }
@@ -72,7 +76,11 @@ function finishReceipt(runDir, record) {
     if (receipt.inputHash !== record.inputHash || typeof receipt.b64 !== "string") {
         throw new Error("Saved receipt does not match this job; no inference was repeated");
     }
-    const bytes = Buffer.from(receipt.b64, "base64");
+    const sourceBytes = Buffer.from(receipt.b64, "base64");
+    const processed = record.args.transparent_background
+        ? removeBorderConnectedBackground(sourceBytes, record.args.background_color)
+        : { bytes: sourceBytes, metadata: null };
+    const bytes = processed.bytes;
     const dimensions = pngDimensions(bytes);
     const sha256 = hash(bytes);
     if (record.output && record.output.sha256 !== sha256) {
@@ -87,7 +95,10 @@ function finishReceipt(runDir, record) {
     Object.assign(record, {
         modelVersion: receipt.metadata.modelVersion, usage: receipt.metadata.usage,
         responseQuality: receipt.metadata.responseQuality, elapsedMs: receipt.metadata.elapsedMs,
-        state: "generated", output: { file: image, sha256, ...dimensions }, error: null,
+        state: "generated", output: {
+            file: image, sha256, ...dimensions,
+            ...(processed.metadata ? { postprocessing: { ...processed.metadata, sourceSha256: hash(sourceBytes) } } : {}),
+        }, error: null,
     });
 }
 
@@ -123,6 +134,7 @@ function summary(runDir, journal) {
             image: job.output ? join(runDir, job.output.file) : null,
             requestedSettings: job.requestedSettings, effectiveSettings: job.effectiveSettings,
             dimensions: job.output ? { width: job.output.width, height: job.output.height } : null,
+            postprocessing: job.output?.postprocessing ?? null,
             attempts: job.attempts.length,
             possibleDuplicateBilling: job.attempts.some((attempt) => attempt.possibleDuplicateBilling),
             review: job.review, error: job.error ?? null,

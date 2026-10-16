@@ -103,7 +103,7 @@
     },
     {
       "name": "foundry-image-gen",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "source": { "source": "local", "path": "./plugins/foundry-image-gen" },
       "interface": { "displayName": "Foundry Image Gen" },
       "description": "Generate and edit images with GPT, FLUX, and MAI in Microsoft Foundry, with optional resumable comparisons and offline delivery.",
