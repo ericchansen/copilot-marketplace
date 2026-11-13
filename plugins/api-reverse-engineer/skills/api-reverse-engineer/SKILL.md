@@ -1,58 +1,92 @@
 ---
 name: api-reverse-engineer
 description: |
-  Reverse-engineer undocumented web APIs by intercepting browser network traffic via CDP.
-  Use when you need to automate a web app that has no public API, or when the documented
-  API doesn't work but the UI does. Captures exact payloads and request headers from
-  live browser sessions. Triggers: "reverse engineer", "intercept", "capture the request",
-  "sniff the API", "what does the UI actually send", "replay the request", "hack the API".
+  Capture, select, and replay an authorized web API request from an established Chrome DevTools
+  Protocol (CDP) connection. Use when the browser UI is the reliable API reference and you need the
+  exact request method, URL, payload, response, or replay shape.
 license: MIT
 allowed-tools: Bash, PowerShell
 ---
 
-# API Reverse Engineering via CDP Network Interception
+# API Reverse Engineer
 
-## When to Use
+Own authorized network capture and replay after a CDP connection exists. Use `edge-browser` for Edge
+profile selection, SSO routing, endpoint discovery, and connection policy.
 
-- A web app's documented API doesn't match what the UI actually sends
-- You need auth tokens only available in the browser session
-- The API returns errors but the same action works through the UI
+## Preconditions
 
-## Prerequisites
+- The user is authorized to access the target system and perform the captured action.
+- You have one of:
+  - a page WebSocket URL from a fixed-port `/json/list` endpoint;
+  - a browser WebSocket URL plus a target page URL; or
+  - a standalone fixed-port endpoint such as `http://127.0.0.1:9222`.
+- The exact request method and URL are known. Do not select by substring or "first POST".
+- Node.js 22.4+ is available for the native `WebSocket` client.
 
-1. Edge or Chrome running with `--remote-debugging-port=9222`. If you have an Edge/browser helper skill installed, you can use it to launch the browser.
-   - **Edge/Chrome 136+ caveat:** CDP is **blocked on the default profile** (the debug port is silently ignored as an anti–cookie-theft mitigation). Bind it with a distinct, non-default `--user-data-dir` without closing the user's Edge, then verify the target app can sign in through PRT/WAM. Use **F12 → Network → Preserve log → Copy as cURL / Save all as HAR with content** only if the target app re-challenges or blocks that profile. (See the `edge-browser` skill for its two CDP paths and SSO capture fallbacks.) Refs: <https://developer.chrome.com/blog/remote-debugging-port>, <https://crbug.com/1414669>
-2. Node.js 22.4+ (stable native `WebSocket`; no `ws` package or install needed)
-3. User must be authenticated in the browser to the target app
+## Safety
 
-## Authorization and Data Handling
+- Observe passively by default. Trigger a UI action only after the user authorizes it.
+- Treat request bodies, response bodies, cookies, authorization headers, and signed URLs as secrets.
+- Keep captures in a protected temporary directory. Never commit them.
+- The helper redacts `Authorization`, `Cookie`, `Proxy-Authorization`, and `Set-Cookie` headers by
+  default. Do not weaken that default.
 
-- Only capture requests for systems you are authorized to use.
-- Treat captured headers, cookies, authorization credentials, and session values as secrets.
-- Write captured payloads and headers only to temporary files.
-- Never commit captured headers, tokens, cookies, customer data, or internal payloads.
+## Capture
 
-## Workflow
+Use `cdp-helper.js` from this skill directory.
 
-1. **Connect** — Read `cdp-helper.js` in this skill's directory for the reusable CDP scaffolding. Copy it, replace `TARGET_DOMAIN` and `TARGET_API` with the actual values.
-2. **Capture** — Enable `Network.enable`, listen for `Network.requestWillBeSent` events. Filter by API domain.
-3. **Observe by default** — Open the target page and capture its traffic without navigating, clicking,
-   or filling forms. Only trigger an action after the user explicitly authorizes it; otherwise ask
-   the user to perform the action manually.
-4. **Harvest** — Extract the captured POST body and headers (including auth tokens). Write to temp files. **Treat captured headers as secrets — never commit them.**
-5. **Replay** — Parse the captured payload, modify fields as needed, replay with `Invoke-RestMethod` or `curl`.
+Established page WebSocket:
 
-## Tips
+```powershell
+node cdp-helper.js `
+  --endpoint 'ws://127.0.0.1:9222/devtools/page/<id>' `
+  --method POST `
+  --url 'https://app.example.com/api/items' `
+  --response-body
+```
 
-- **React inputs**: Native `el.value = 'x'` won't work. Use the property descriptor trick: `Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, value)` then dispatch `input` and `change` events.
-- **Auth tokens**: SPAs often store JWTs in `sessionStorage`. Extract with `evalJS`. Tokens expire in 30-60 min.
-- **Swagger vs Reality**: Always trust the captured payload over the docs. The UI often uses a completely different DTO shape.
-- **Response bodies**: Use `Network.getResponseBody` with the requestId after `Network.responseReceived` fires.
+Established browser WebSocket with a flattened target session:
 
-## Pitfalls
+```powershell
+node cdp-helper.js `
+  --endpoint 'ws://127.0.0.1:<port>/devtools/browser/<id>' `
+  --page-url 'https://app.example.com/items' `
+  --method POST `
+  --url 'https://app.example.com/api/items'
+```
 
-1. All `send()` calls must be inside the WebSocket `open` handler — #1 cause of `readyState 0` errors
-2. New tabs get different WebSocket URLs — re-query `/json/list` after navigation
-3. `evalJS` on void expressions (like `scrollIntoView()`) returns undefined — append `; 'ok'`
-4. React validation may be async — wait 2-5 seconds after filling before checking Submit state
-5. Validate payload completeness before replaying — empty fields create garbage records
+Standalone fixed-port path:
+
+```powershell
+node cdp-helper.js `
+  --endpoint 'http://127.0.0.1:9222' `
+  --page-url 'https://app.example.com/items' `
+  --method POST `
+  --url 'https://app.example.com/api/items'
+```
+
+Equivalent environment variables are `CDP_ENDPOINT`, `CDP_PAGE_URL`, `CDP_METHOD`,
+`CDP_REQUEST_URL`, `CDP_WAIT_MS`, `CDP_OUTPUT_DIR`, and `CDP_CAPTURE_RESPONSE_BODY=1`.
+
+During the capture window, ask the user to perform the authorized action or run separately approved
+automation. The helper exits with failure when zero or multiple requests match the exact method and
+URL.
+
+## Replay
+
+1. Read the redacted capture from the reported temporary path.
+2. Validate required fields and identify values that must be refreshed.
+3. Obtain current credentials from an approved source without printing or persisting them.
+4. Replay with `Invoke-RestMethod`, `curl`, or the system's supported client.
+5. Confirm the response and resulting system state. Do not treat HTTP success alone as proof.
+
+## Exit criteria
+
+Stop when one of these outcomes is true:
+
+- **Captured:** exactly one request matched, the requested body data was collected, and the redacted
+  artifact path was reported.
+- **No match:** no request used the exact method and URL during the window.
+- **Ambiguous:** more than one request matched; narrow the action or repeat in a clean window.
+- **Blocked:** the CDP connection closed, target selection was ambiguous, response-body retrieval
+  failed, or authorization for the browser action was not granted.
