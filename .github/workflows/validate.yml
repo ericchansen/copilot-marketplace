@@ -195,3 +195,16 @@ jobs:
       - name: Test offline image tools and workflows
         working-directory: plugins/foundry-image-gen/.github/extensions/foundry-image-gen
         run: node --test && node extension.mjs --self-test
+
+  test-browser-cdp:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.4.0
+      - name: Test CDP capture helper
+        run: node --test plugins/api-reverse-engineer/skills/api-reverse-engineer/cdp-helper.test.js
