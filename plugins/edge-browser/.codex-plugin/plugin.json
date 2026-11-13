@@ -1,6 +1,6 @@
 {
   "name": "edge-browser",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Control Microsoft Edge over Chrome DevTools Protocol, either on a dedicated debug profile or on the real signed-in profile via Edge's in-browser remote-debugging opt-in.",
   "skills": "./skills/"
 }
