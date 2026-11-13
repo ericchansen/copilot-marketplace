@@ -1,7 +1,7 @@
 {
   "name": "edge-browser",
-  "description": "Control Microsoft Edge over Chrome DevTools Protocol, either on a dedicated debug profile or on the real signed-in profile via Edge's in-browser remote-debugging opt-in.",
-  "version": "0.2.0",
+  "description": "Establish and verify Microsoft Edge CDP connections using an isolated debug profile or the real signed-in profile.",
+  "version": "0.2.1",
   "author": {
     "name": "Eric Hansen",
     "url": "https://github.com/ericchansen"
